@@ -33,7 +33,7 @@ For remote sending, rysnc is needed on both the local machine and the remote, de
 
 #### build into binary
 ```shell
-·> go build ipx
+·> go build cargoport.go
 ```
 
 #### add to $PATH (optional)
