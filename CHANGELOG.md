@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.87.50] - 2025-1-23
+- Reworked majority of target & path logic
+- Adjusted backup storage paths (uses /opt/cargoport/ as root dir), docker digest file adjustments
+- Overhauled docker container location & detection logic, docker mode can now be dynamically enabled by cargoport using docker-compose.yml searching features
+- Now supports locating of docker-compose.yml by docker container name, such as `-docker-name=<container-name>` to locate container & perform docker tasks
+
 ## [v0.87.1] - 2025-1-22
 - Branding adjustments & general tidyup
 - Basic logging implemented

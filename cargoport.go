@@ -1,6 +1,6 @@
 package main
 
-// Cargoport v0.87.1
+// Cargoport v0.87.50
 
 import (
 	"flag"
@@ -15,27 +15,27 @@ import (
 )
 
 const (
-	//// IMPORTANT: In order to change the default docker backup & docker compose container root paths, these variables must be changed manually and the executable rebuilt!
-	//// Don't forget the trailing `/`
+	//// IMPORTANT: In order to change default cargoport storage directory, the following vars must be edited and the binar rebuilt~!
+	// Don't forget the trailing `/` here!
 
-	// Defines the root directory for all docker compose container directories, as well as the directory to store compressed backups
-	// all docker containers must be located at `/opt/docker/container1`,`/opt/docker/container2`, etc., change this root path below:
-	DefaultTargetRoot = "/opt/docker/"
-	DefaultBackupRoot = "/opt/docker-backups/"
-	Version           = "v0.87.1"
+	// Defines the root directory storage directory for cargoport, default is `/opt/cargoport/` and all backups, both local and remote, are stored here
+	//DefaultTargetRoot = "/opt/docker/"
+	//DefaultBackupRoot = "/opt/docker-backups/"
+	DefaultCargoportDir = "/opt/cargoport/"
+	Version             = "v0.87.50"
 )
 
 // declare config struct
 type Config struct {
-	TargetRootPath string
-	BackupRootPath string
-	TargetName     string
-	RemoteUser     string
-	RemoteHost     string
-	Version        string
-	RemoteSend     bool
-	DockerEnabled  bool
-	SkipLocal      bool
+	DefaultCargoportDir string
+	Version             string
+	TargetDir           string
+	DockerName          string
+	RemoteUser          string
+	RemoteHost          string
+	RemoteSend          bool
+	DockerEnabled       bool
+	SkipLocal           bool
 }
 
 // init logging
@@ -59,7 +59,7 @@ func runCommand(commandName string, args ...string) error {
 }
 
 func findComposeFile(containerName string) (string, error) {
-	cmd := exec.Command("docker", "inspect", containerName, "--format", "{{ .Config.Labels.com.docker.compose.project.working_dir }}")
+	cmd := exec.Command("docker", "inspect", containerName, "--format", "{{ index .Config.Labels \"com.docker.compose.project.working_dir\" }}")
 	output, err := cmd.Output()
 	if err != nil {
 		return "", fmt.Errorf("ERROR: Failed to locate docker compose file for container %s: %v", containerName, err)
@@ -74,7 +74,7 @@ func getDockerImages(composeFile string, outputFile string) error {
 	output, err := cmd.Output()
 	if err != nil {
 
-		return fmt.Errorf("Failed to get docker images: %v", err)
+		return fmt.Errorf("failed to get docker images: %v", err)
 	}
 
 	// loop over image ids to gather docker image digests
@@ -91,14 +91,14 @@ func getDockerImages(composeFile string, outputFile string) error {
 		cmdInspect := exec.Command("docker", "inspect", "--format", "{{index .RepoDigests 0}}", imageID)
 		digestOutput, err := cmdInspect.Output()
 		if err != nil {
-			return fmt.Errorf("Failed to inspect docker images: %v", err)
+			return fmt.Errorf("failed to inspect docker images: %v", err)
 		}
 		imageInfo += fmt.Sprintf("Image: %s Digest: %s\n", imageID, digestOutput)
 	}
 
 	err = os.WriteFile(outputFile, []byte(imageInfo), 0644)
 	if err != nil {
-		return fmt.Errorf("Failed to write docker image version info to file: %v", err)
+		return fmt.Errorf("failed to write docker image version info to file: %v", err)
 	}
 
 	fmt.Println("Docker image information and digests saved to", outputFile)
@@ -109,7 +109,7 @@ func checkDockerRunState(composeFile string) (bool, error) {
 	cmd := exec.Command("docker", "compose", "-f", composeFile, "ps", "--services", "--filter", "status=running")
 	output, err := cmd.Output()
 	if err != nil {
-		return false, fmt.Errorf("Failed to check Docker container status: %v", err)
+		return false, fmt.Errorf("failed to check Docker container status: %v", err)
 	}
 	runningServices := strings.TrimSpace(string(output))
 	if runningServices == "" {
@@ -120,31 +120,29 @@ func checkDockerRunState(composeFile string) (bool, error) {
 
 func main() {
 
-	// begin logging
-	initLogging()
+	initLogging() // begins logging for runtime
 
 	var err error
 
 	// Defines config values
 	config := Config{
-		TargetRootPath: DefaultTargetRoot,
-		BackupRootPath: DefaultBackupRoot,
-		Version:        Version,
+		DefaultCargoportDir: DefaultCargoportDir,
+		Version:             Version,
 	}
 
 	// Flag definitions
-	targetName := flag.String("target", "", "Name of target directory, not including root path")
+	targetDir := flag.String("target-dir", "", "Target directory to back up (Note: Can safely be run even if dir contains docker data!)")
+	dockerName := flag.String("docker-name", "", "Target Docker service name  (Note: All containers apart of the destination compose-file will be restarted!)")
+	skipLocal := flag.Bool("skip-local", false, "Skip local backup & only send to remote target (Note: Still requires -remote-send!)")
+	appVersion := flag.Bool("version", false, "Display app version information")
+	// Remote handling flags
 	remoteSend := flag.Bool("remote-send", false, "Enable sending backup file to remote machine. Additional flags needed!")
 	remoteUser := flag.String("remote-user", "", "Remote machine username")
 	remoteHost := flag.String("remote-host", "", "Remote machine IP address")
 	remoteFile := flag.String("remote-file", "", "Remote filepath. Defaults to /home/$USER/$TARGETNAME.bak.tar.gz")
-	dockerBool := flag.Bool("docker", true, "Docker target? Default: true")
-	skipLocal := flag.Bool("skip-local", false, "Skip local backups, only send to remote target (Still requires -remote-send)")
-	appVersion := flag.Bool("version", false, "Display app version information")
 
 	// New flags for custom paths
-	customSrcRoot := flag.String("src-root", "", "Custom source root path (overrides default set in Config)")
-	customDstRoot := flag.String("dst-root", "", "Custom destination root path (overrides default set in Config)")
+	//customDstRoot := flag.String("dst-root", "", "Custom destination root path (overrides default set in Config)")
 
 	flag.Parse()
 
@@ -154,43 +152,89 @@ func main() {
 		os.Exit(0)
 	}
 
-	log.Println("-------------------------------------------------------------------------")
-	log.Printf("Beginning Backup Job -- cargoport %s", Version)
-
-	// Apply override paths if provided
-
-	if *customSrcRoot != "" {
-		config.TargetRootPath = *customSrcRoot
-	}
-
-	if *customDstRoot != "" {
-		config.BackupRootPath = *customDstRoot
-	}
-
 	// Flag validations
 
-	if *targetName == "" {
-		fmt.Println("Target must be specified!")
-		fmt.Println("Exiting..")
+	// Neither target directory nor target docker service name is supplied
+	if *targetDir == "" && *dockerName == "" {
+		fmt.Println("ERROR: Must specify either a target directory OR a Docker container name (but not both).")
+		os.Exit(1)
+
+		// Both target dir & target docker are supplied
+	} else if *targetDir != "" && *dockerName != "" {
+		fmt.Println("ERROR: Cannot specify BOTH a target directory AND a Docker container name. Please pick one.")
 		os.Exit(1)
 	}
 
 	if *skipLocal && !*remoteSend {
-		fmt.Println("Error: -skip-local requires -remote-send to be set")
+		fmt.Println("ERROR: -skip-local requires -remote-send to be set!")
 		fmt.Println("Exiting ...")
 		os.Exit(1)
 	}
 
-	sourceDir := filepath.Join(config.TargetRootPath, *targetName)
-	backupFile := filepath.Join(config.BackupRootPath, *targetName+".bak.tar.gz")
-	imageVersionFile := filepath.Join(sourceDir, "docker-image-versions.txt")
+	// User actual string value from flag
+	sourceDir := *targetDir //
 
-	// Handle docker operations
+	var dirName string
 
-	if *dockerBool {
-		composeFilePath := filepath.Join(sourceDir, "docker-compose.yml")
+	// Create /opt/cargoport/ & /opt/cargoport/local/ directories on local machine
+	cargoportBase := config.DefaultCargoportDir
+	cargoportLocal := filepath.Join(cargoportBase, "local")
+	cargoportRemote := filepath.Join(cargoportBase, "remote")
 
-		// Check that docker-compose.yml file exists
+	if err = os.MkdirAll(cargoportLocal, 0755); err != nil {
+		log.Fatalf("Error creating directory %s: %v", cargoportLocal, err)
+	}
+
+	if err = os.MkdirAll(cargoportRemote, 0755); err != nil {
+		log.Fatalf("Error creating directory %s: %v", cargoportRemote, err)
+	}
+
+	log.Println("-------------------------------------------------------------------------")
+	log.Printf("Beginning Backup Job -- cargoport %s", Version)
+
+	// Check if target dir contains docker compose, if so then handle docker shutdown before backup
+
+	dockerBool := false
+	var composeFilePath string
+
+	var imageVersionFile string
+
+	// If the user passed -docker-name
+	if *dockerName != "" {
+		composeFilePath, err = findComposeFile(*dockerName)
+		if err != nil {
+			log.Fatalf("Error locating Docker Compose file: %v", err)
+		}
+
+		dockerBool = true
+		sourceDir = filepath.Dir(composeFilePath)
+		dirName = filepath.Base(sourceDir)
+
+	} else if *targetDir != "" {
+		sourceDir = *targetDir
+		dirName = filepath.Base(strings.TrimSuffix(sourceDir, "/"))
+
+		// Check if docker-compose.yml exists in target directory
+		possibleCompose := filepath.Join(sourceDir, "docker-compose.yml")
+		if fi, err := os.Stat(possibleCompose); err == nil && !fi.IsDir() {
+			composeFilePath = possibleCompose
+			dockerBool = true
+		}
+	}
+
+	if dirName == "" || dirName == "." {
+		log.Fatalf("Invalid directory name derived from sourceDir: %s", sourceDir)
+	}
+
+	backupFile := filepath.Join(
+		cargoportLocal,
+		dirName+".bak.tar.gz",
+	)
+
+	if dockerBool {
+
+		// This logic should never apply if docker-compose.yml does not exist
+		// Buuut extra check anyway:
 		if _, err := os.Stat(composeFilePath); os.IsNotExist(err) {
 			log.Fatalf("docker-compose.yml not found at %s", composeFilePath)
 		}
@@ -206,6 +250,11 @@ func main() {
 		// Get Docker image information & store it in the working dir
 		fmt.Println("-------------------------------------------------------------------------")
 		fmt.Println("Getting Docker image versions . . .")
+		if dockerBool {
+			imageVersionFile = filepath.Join(filepath.Dir(composeFilePath), "compose-img-digests.txt")
+		} else {
+			imageVersionFile = filepath.Join(sourceDir, "compose-img-digests.txt")
+		}
 		err = getDockerImages(composeFilePath, imageVersionFile)
 		if err != nil {
 			log.Fatalf("Error retrieving Docker image versions: %v", err)
@@ -222,25 +271,36 @@ func main() {
 		}
 	}
 
-	// Create temp backup file if skipping local backup
+	// Create temp backup filepath if skipping local backup
 	tempBackupFile := backupFile
 	if *skipLocal {
-		tempBackupFile = filepath.Join(os.TempDir(), *targetName+".bak.tar.gz")
+		tempBackupFile = filepath.Join(os.TempDir(), dirName+".bak.tar.gz")
 	}
 
 	// Compress target directory
 	fmt.Println("-------------------------------------------------------------------------")
 	fmt.Println("Compressing container directory . . .")
 	fmt.Println("-------------------------------------------------------------------------")
-	err = runCommand("tar", "-cvzf", tempBackupFile, "-C", config.TargetRootPath, *targetName)
+	err = runCommand(
+		"tar",
+		"-cvzf",
+		tempBackupFile,
+		"-C",
+		filepath.Dir(sourceDir),  // Parent directory
+		filepath.Base(sourceDir), // Directory to compress
+	)
 	if err != nil {
 		log.Fatalf("Error compressing directory: %v", err)
 	}
-	log.Printf("Contents of %s/%s Successfully Compressed to %s", config.TargetRootPath, *targetName, tempBackupFile)
+
+	log.Printf("Contents of %s successfully compressed to %s",
+		*targetDir,
+		tempBackupFile,
+	)
 
 	if !*skipLocal {
 		fmt.Println("-------------------------------------------------------------------------")
-		fmt.Println("Backupfile saved at:", backupFile)
+		fmt.Println("Backupfile saved at:", tempBackupFile)
 	}
 
 	// Handle remote rsync transfer
@@ -252,7 +312,7 @@ func main() {
 		// Set default remote file path to remote user's homedir if none is specified
 		remoteFilePath := *remoteFile
 		if remoteFilePath == "" {
-			remoteFilePath = fmt.Sprintf("/home/%s/%s.bak.tar.gz", *remoteUser, *targetName)
+			remoteFilePath = fmt.Sprintf("/home/%s/%s.bak.tar.gz", *remoteUser, dirName)
 		}
 
 		fmt.Println("Copying to remote machine . . .")
@@ -277,7 +337,7 @@ func main() {
 	}
 
 	// Restart docker container
-	if *dockerBool {
+	if dockerBool {
 		fmt.Println("-------------------------------------------------------------------------")
 		fmt.Println("Starting Docker container . . .")
 		fmt.Println("-------------------------------------------------------------------------")
@@ -287,6 +347,6 @@ func main() {
 		}
 	}
 
-	log.Printf("Successful backup job on %s", *targetName)
+	log.Printf("Successful backup job on %s", dirName)
 	log.Println("-------------------------------------------------------------------------")
 }
