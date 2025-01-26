@@ -1,9 +1,21 @@
 
 A docker compose environment backup & transfer tool, written in Go!
+
+
+## Table of Contents
+- [Install](#install)
+  - [Dependencies](#dependencies)
+  - [Set up CargoPort](#set-up-cargoport)
+- [Example Use-Cases](#example-use-cases)
+  - [Docker examples](#docker-examples)
+  - [Crontab use-case](#crontab-usecase)
+- [Restoring a Cargoport Backup](#restoring-a-cargoport-backup)
+
+---
+
 # 🚢 cargoport
 
-
-Performs backup on target docker compose container and its contents, storing them as a `*.bak.tar.gz` compression file in the location of your choosing, such as on another drive. Optionally, the newly compressed tarfile file can be transferred to a remote machine both securely and reliably when passed flags to do so via SSH TLS encyption and checksum validation for filetransfer. 
+Performs backup on target docker compose container and its contents, storing them as a `*.bak.tar.gz` compression file in the location of your choosing, such as on another drive. Optionally, the newly compressed tarfile can be transferred to a remote machine both securely and reliably when passed flags to do so via SSH TLS encyption and checksum validation for filetransfer. 
 
 So long as SSH keys are set up between the local machine running cargoport and the target remote machine (or only local backups used), cargoport can be called by crontabs to faciliate both local and remote backups on a schedule, being written from the ground up for this purpose.
 
@@ -24,6 +36,8 @@ Recommended Typical Directory Structure Example:
 Crucially, docker services are fully shut down prior to compression and transfer, and the current docker service image digests are stored alongside the `docker-compose.yml` file such that the currently active docker image digests are *always* tracked with each and every container backup to help facilitate restoration in a docker container failure/emergency, especially those regarding updates on images that result in database errors and dockercompose files defined using `:latest` images, as moving to a new machine may cause version mismatches with new image pulls.
 
 The newly compressed file, including the aforementioned image digests, can optionally be transferred to a remote machine securely and reliably using Rsync via the `-remote-send` flag. Cargoport *forces* SSH & TLS transport to ensure security in transit and forces checksum validations during data send & receipt to ensure no data is corrupted or altered during the remote transfer process.
+
+---
 
 ## Install
 
@@ -87,9 +101,9 @@ cargoport version: v1.x.x
 ```
 
 
+---
 
-
-## Example use-cases
+## Example Use-Cases
 
 Compress a copy of target directory's data, storing it elsewhere locally
 ```shell
@@ -149,7 +163,9 @@ These work great for nightly docker backups and copy critical docker container d
 10 3 * * MON /usr/local/bin/cargoport -docker-name=vaultwarden -remote-host=10.0.0.1 -remote-user=agriffin
 ```
 
-## Restoring a Cargoport backup 
+---
+
+# Restoring a Cargoport Backup 
 
 First decompress file contents:
 ```shell
