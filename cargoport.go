@@ -1,6 +1,6 @@
 package main
 
-// Cargoport v0.87.57
+// Cargoport v0.87.60
 
 import (
 	"flag"
@@ -23,7 +23,7 @@ const (
 	//DefaultTargetRoot = "/opt/docker/"
 	//DefaultBackupRoot = "/opt/docker-backups/"
 	DefaultCargoportDir = "/opt/cargoport/"
-	Version             = "v0.87.57"
+	Version             = "v0.87.60"
 )
 
 // declare config struct
@@ -234,13 +234,13 @@ func main() {
 	dockerName := flag.String("docker-name", "", "Target Docker service name  (Note: All containers apart of the destination compose-file will be restarted!)")
 	skipLocal := flag.Bool("skip-local", false, "Skip local backup & only send to remote target (Note: Still requires -remote-send!)")
 	appVersion := flag.Bool("version", false, "Display app version information")
-	//customDstRoot := flag.String("dst-root", "", "Custom destination root path (overrides default set in Config)")
+	localOutputDir := flag.String("output-dir", "", "Custom destination for local output")
 
 	// Remote handling flags
 	//remoteSend := flag.Bool("remote-send", false, "Enable sending backup file to remote machine. Additional flags needed!")
 	remoteUser := flag.String("remote-user", "", "Remote machine username")
 	remoteHost := flag.String("remote-host", "", "Remote machine IPv4 or IPv6 addres")
-	remoteTargetDir := flag.String("remote-dir", "", "Remote target directory, file will save as <file>.bak.tar.gz. Defaults to remote user's homedir if left blank")
+	remoteOutputDir := flag.String("remote-dir", "", "Remote target directory, file will save as <file>.bak.tar.gz. Defaults to remote user's homedir if left blank")
 
 	flag.Parse()
 
@@ -268,8 +268,8 @@ func main() {
 	//<subsection>  REMOTE SEND VALIDATION LOGIC
 	//------------
 
-	// If either remoteUser or remoteTargetDir are passed at runtime but remoteHost is NOT passed, Fatalf
-	if (*remoteUser != "" || *remoteTargetDir != "") && *remoteHost == "" {
+	// If either remoteUser or remoteOutputDir are passed at runtime but remoteHost is NOT passed, Fatalf
+	if (*remoteUser != "" || *remoteOutputDir != "") && *remoteHost == "" {
 		fmt.Println("ERROR: Remote host must be specified when passing a remote user or remote target!")
 		log.Fatalf("ERROR: Remote host must be specified when passing a remote user or remote target!")
 	}
@@ -403,6 +403,10 @@ func main() {
 		plannedBackupFile = filepath.Join(os.TempDir(), dirName+".bak.tar.gz")
 	}
 
+	if *localOutputDir != "" {
+		plannedBackupFile = filepath.Join(strings.TrimSuffix(*localOutputDir, "/"), dirName+".bak.tar.gz")
+	}
+
 	// compress target directory
 	compressDirectory(targetDirectory, plannedBackupFile)
 
@@ -416,7 +420,7 @@ func main() {
 
 	// if remote send is enabled, perform transfer of compressionfile
 	if remoteSendBool {
-		sendToRemote(*remoteTargetDir, *remoteUser, *remoteHost, dirName, plannedBackupFile)
+		sendToRemote(*remoteOutputDir, *remoteUser, *remoteHost, dirName, plannedBackupFile)
 		remoteSendBool = false // just to be safe tbh
 	}
 

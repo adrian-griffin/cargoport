@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.87.60] - 2025-1-25
+- Adjust custom local backup output dir logic
+
 ## [0.87.57] - 2025-1-25
 - Overhaulinged Docker logic, adding additional flags for docker logic regarding restarting container or not
 - Fixed issue with not performing backup when target directory's docker container was not in running state
