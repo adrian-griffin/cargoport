@@ -79,6 +79,7 @@ Perform a local-only backup of a docker compose container directory
 ```
 
 Perform backup of a docker container based on docker container's name
+
 The db service here being an example, because ALL services defined in the composefile associated with this target container will be restarted & backed up
 i.e: `container-name` will be backed up, including its associated parts, such as `container-name-db`, `container-name-web`, `container-name-etc`
 ```shell
@@ -104,16 +105,20 @@ Note that in order for cargoport to be used with Crontabs, an SSH key must be ut
 Perform compression & secure transfer for regular (non Docker), specific target directory, sending to specified remote path on remote machine. Skips storage of directory backup on local machine.
 ```shell
 ### Skip local backup, and compress & copy non-docker directory to remote destination path
-·> sudo ./cargoport 
--target=foo \ 
+·> cargoport 
+-target-dir=/var/lib/foobar \ 
 -skip-local \ 
--docker=false \
--remote-send \ 
 -remote-host 192.168.0.1 \
--src-root=/etc/foo \ 
--remote-file=/path/to/dst/foo.bak.tar.gz \ 
--remote-user=agriffin 
+-remote-user=agriffin \
+-remote-dir=/home/someuser/stuff/
+```
 
+Remote & local backup for a docker compose setup running a container named 'vaultwarden'
+```shell
+·> cargoport
+-docker-name=vaultwarden \ 
+-remote-host=10.115.0.1 \
+-remote-user=agriffin
 ```
 
 ### Crontab usecase
@@ -125,6 +130,8 @@ These work great for nightly docker backups and copy critical docker container d
 # . . . 
 # m h  dom mon dow   command
 # . . .
-## Perform local backup on docker container every night at 1:00
-0 1 * * * /usr/local/bin/cargoport -target=foobar -docker
+## Perform local backup on docker container every night at 1:00 AM
+0 1 * * * /usr/local/bin/cargoport -target-dir=/opt/docker/<dockername>
+## Perform remote & local backup on target dockername every Monday at 3:10 AM (defaults to /home/agriffin/vaultwarden.bak.tar.gz on remote)
+10 3 * * MON /usr/local/bin/cargoport -docker-name=vaultwarden -remote-host=10.0.0.1 -remote-user=agriffin
 ```
