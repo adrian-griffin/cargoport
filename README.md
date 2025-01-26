@@ -34,17 +34,17 @@ The newly compressed file, including the aforementioned image digests, can optio
 - Tar is needed on the system to allow compression and to restore completed backups
 
 #### go
-Cargo should be compiled from raw sourcecode, and as such Go will need to be installed on your machine to build cargoport into an executable binary. 
+Cargoport should be compiled from raw sourcecode, and as such Go will need to be installed on your machine to build into an executable binary. 
 
 For more detailed instructions, please visit Go's documentation for installation instructions, here: https://go.dev/doc/install
 ```shell
 # Create go dir and build dirs, wget go version tar.gz
 ·> cd ~
 ·> mkdir go && mkdir go/builds/
-# This will donwload Go v1.22.5 for Debian machines running AMD64 architecture
+# This will download Go v1.22.5 for Debian machines running AMD64 architecture, please adjust as necessary
 ·> cd ~/go/builds/ && wget https://go.dev/dl/go1.22.5.linux-amd64.tar.gz
 
-# Clear out any remaining or old Go install files & decompress new content into from /usr/local/go
+# Clear out any remaining or old Go install files & decompress new content into /usr/local/go
 ·> rm -rf /usr/local/go && tar -C /usr/local -xzf go1.22.5.linux-amd64.tar.gz
 
 # Add /usr/local/go/bin to $PATH
@@ -148,3 +148,39 @@ These work great for nightly docker backups and copy critical docker container d
 ## Perform remote & local backup on target dockername every Monday at 3:10 AM (defaults to /home/agriffin/vaultwarden.bak.tar.gz on remote)
 10 3 * * MON /usr/local/bin/cargoport -docker-name=vaultwarden -remote-host=10.0.0.1 -remote-user=agriffin
 ```
+
+## Restoring a Cargoport backup 
+
+First decompress file contents:
+```shell
+·> cd /opt/cargoport/local/ && ls
+Container1.bak.tar.gz  Container2.bak.tar.gz Vaultwarden.bak.tar.gz
+# decompress target tarball
+·> sudo tar -xzvf Vaultwarden.bak.tar.gz && ls
+. . . 
+#                                             output
+Container1.bak.tar.gz  Container2.bak.tar.gz Vaultwarden Vaultwarden.bak.tar.gz
+```
+
+#### Docker specific restoration:
+
+If the newly output directory contained `docker-compose.yml` file during former backup process, then image digests will be stored within:
+```shell
+·> cat Vaultwarden/compose-img-digests.txt 
+Image: <image-id> Digest: vaultwarden/server@sha256:<image-digest>
+```
+
+Oftentimes, activating the docker compose container from this point will do the trick, but if you run into any sort of image version issues (such as ones caused by using the `:latest` tag, compose file adjustments, etc), you can statically set the index digest in your composefile and perform a `docker compose up` once again:
+```shell
+·> vim docker-compose.yml
+#! ./Vaultwarden/docker-compose.yml
+services:
+  vaultwarden:
+    image: vaultwarden/server@sha256:<image-digest>
+
+    ## MACVLAN networking
+    #  . . . 
+    # EOF
+```
+
+This will ensure that the exact image formerly used pre-backup is pulled to the machine when the docker compose container is spun back up.
