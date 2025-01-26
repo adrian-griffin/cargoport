@@ -1,6 +1,6 @@
 package main
 
-// Cargoport v0.87.6
+// Cargoport v0.87.61
 
 import (
 	"flag"
@@ -19,11 +19,11 @@ const (
 	//// IMPORTANT: In order to change default cargoport storage directory, the following vars must be edited and the binar rebuilt~!
 	// Don't forget the trailing `/` here!
 
-	// Defines the root directory storage directory for cargoport, default is `/opt/cargoport/` and all backups, both local and remote, are stored here
+	// Defines the root directory storage directory for cargoport, default is `/var/cargoport/` and all backups, both local and remote, are stored here
 	//DefaultTargetRoot = "/opt/docker/"
 	//DefaultBackupRoot = "/opt/docker-backups/"
-	DefaultCargoportDir = "/opt/cargoport/"
-	Version             = "v0.87.57"
+	DefaultCargoportDir = "/var/cargoport/"
+	Version             = "v0.87.61"
 )
 
 // declare config struct
@@ -43,9 +43,13 @@ type Config struct {
 //<section>        FUNCTIONS
 //------------------------------------------------------------
 
-// init logging
-func initLogging() {
-	logFile, err := os.OpenFile("/var/log/cargoport.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+//<subsection>   INIT
+//------------
+
+// inits logging services
+func initLogging(cargoportBase string) {
+	logFilePath := filepath.Join(cargoportBase, "cargoport-main.log")
+	logFile, err := os.OpenFile(logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		fmt.Printf("ERROR: Failed to initialize logging: %v\n", err)
 		os.Exit(1)
@@ -54,16 +58,41 @@ func initLogging() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 }
 
-// requires command name (docker, tar, etc); accepts multiple arguments
-func runCommand(commandName string, args ...string) error {
-	cmd := exec.Command(commandName, args...)
+// ensures that local default cargoport dir exists; returns `cargoportBase, cargoportLocal, cargoportRemote, nil`
+func initCargoportDirs(config Config) (string, string, string, error) {
+	var err error
 
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	return cmd.Run()
+	// Create /var/cargoport/ directories on local machine
+	cargoportBase := strings.TrimSuffix(config.DefaultCargoportDir, "/")
+	cargoportLocal := filepath.Join(cargoportBase, "/local")
+	cargoportRemote := filepath.Join(cargoportBase, "/remote")
+
+	// create /var/cargoport/
+	if err = os.MkdirAll(cargoportBase, 0755); err != nil {
+		log.Fatalf("Error creating directory %s: %v", cargoportLocal, err)
+	}
+	// create /var/cargoport/local
+	if err = os.MkdirAll(cargoportLocal, 0755); err != nil {
+		log.Fatalf("Error creating directory %s: %v", cargoportLocal, err)
+	}
+	// create /var/cargoport/remote
+	if err = os.MkdirAll(cargoportRemote, 0755); err != nil {
+		log.Fatalf("Error creating directory %s: %v", cargoportRemote, err)
+	}
+
+	// set 777 on /var/cargoport/remote for all users to access
+	err = runCommand("chmod", "-R", "777", cargoportRemote)
+	if err != nil {
+		log.Fatalf("Error setting %s permissions for remotewrite: %v", cargoportRemote, err)
+	}
+
+	return cargoportBase, cargoportLocal, cargoportRemote, nil
 }
 
-// locate docker compose file based on container name
+//<subsection>   DOCKER FUNCTIONS
+//------------
+
+// locates docker compose file based on container name
 func findComposeFile(containerName string) (string, error) {
 	cmd := exec.Command("docker", "inspect", containerName, "--format", "{{ index .Config.Labels \"com.docker.compose.project.working_dir\" }}")
 	output, err := cmd.Output()
@@ -74,7 +103,7 @@ func findComposeFile(containerName string) (string, error) {
 	return filepath.Join(composePath, "docker-compose.yml"), nil // return filepath to compose
 }
 
-// collects docker image information and digests, stores alongside `docker-compose.yml` file in newly compressed tarball
+// collects docker image information and digests, stores alongside `docker-compose.yml` file
 func getDockerImages(composeFile string, outputFile string) error {
 	cmd := exec.Command("docker", "compose", "-f", composeFile, "images", "--quiet")
 	output, err := cmd.Output()
@@ -83,7 +112,7 @@ func getDockerImages(composeFile string, outputFile string) error {
 		return fmt.Errorf("failed to get docker images: %v", err)
 	}
 
-	// loop over image ids to gather docker image digests
+	// loops over image ids to gather docker image digests
 	imageLines := string(output)
 	imageList := strings.Split(imageLines, "\n")
 	var imageInfo string
@@ -93,7 +122,7 @@ func getDockerImages(composeFile string, outputFile string) error {
 			continue
 		}
 
-		// actually get image digest
+		// grab image digests based on image id
 		cmdInspect := exec.Command("docker", "inspect", "--format", "{{index .RepoDigests 0}}", imageID)
 		digestOutput, err := cmdInspect.Output()
 		if err != nil {
@@ -102,6 +131,7 @@ func getDockerImages(composeFile string, outputFile string) error {
 		imageInfo += fmt.Sprintf("Image ID: %s  |  Image Digest: %s\n", imageID, digestOutput)
 	}
 
+	// cleans up image whitespace formatting and writes to file
 	trimmedImageInfo := strings.TrimSpace(imageInfo)
 	err = os.WriteFile(outputFile, []byte(trimmedImageInfo), 0644)
 	if err != nil {
@@ -141,6 +171,9 @@ func startDockerContainer(composefile string) error {
 	return err
 }
 
+//<subsection>   OS/SYS FUNCTIONS
+//------------
+
 func compressDirectory(targetDir, outputFile string) error {
 	// compress target directory
 	fmt.Println("-------------------------------------------------------------------------")
@@ -176,9 +209,23 @@ func compressDirectory(targetDir, outputFile string) error {
 	return nil
 }
 
-// handle remote rsync transfer to another node
-func sendToRemote(passedRemotePath, passedRemoteUser, passedRemoteHost, backupFileNameBase, targetFileToTransfer string) error {
+// executes command on local system
+func runCommand(commandName string, args ...string) error {
+	cmd := exec.Command(commandName, args...)
 
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
+}
+
+//<subsection>   REMOTE TRANSFER FUNCTIONS
+//------------
+
+// handle remote rsync transfer to another node
+func sendToRemote(passedRemotePath, passedRemoteUser, passedRemoteHost, backupFileNameBase, targetFileToTransfer string, config Config) error {
+
+	//<section>  VALIDATIONS
+	//---------
 	// if remote host is empty
 	if passedRemoteHost == "" {
 		fmt.Println("ERROR: Remote host address (ipv4 or ipv6) must be provided for remote transfer!")
@@ -192,11 +239,15 @@ func sendToRemote(passedRemotePath, passedRemoteUser, passedRemoteHost, backupFi
 		fmt.Println("ERROR: Both remote user & host must be specified when sending to a remote machine!")
 	}
 
-	// set default remote file path to remote user's homedir if none is specified
-	remoteFilePath := passedRemotePath
-	if remoteFilePath == "" {
-		remoteFilePath = fmt.Sprintf("/home/%s/%s.bak.tar.gz", passedRemoteUser, backupFileNameBase)
-		//remoteFilePath = fmt.Sprintf("/opt/cargoport/remote/%s.bak.tar.gz", dirName)
+	var remoteFilePath string
+
+	if passedRemotePath != "" {
+		// Custom path provided at runtime
+		remoteFilePath = strings.TrimSuffix(passedRemotePath, "/")
+		remoteFilePath = fmt.Sprintf("%s/%s.bak.tar.gz", remoteFilePath, backupFileNameBase)
+	} else {
+		// Fallback to configuration-defined path
+		remoteFilePath = fmt.Sprintf("%s/remote/%s.bak.tar.gz", strings.TrimSuffix(config.DefaultCargoportDir, "/"), backupFileNameBase)
 	}
 
 	log.Printf("Copying to remote %s@%s:%s . . .", passedRemoteUser, passedRemoteHost, remoteFilePath)
@@ -216,19 +267,11 @@ func sendToRemote(passedRemotePath, passedRemoteUser, passedRemoteHost, backupFi
 }
 
 func main() {
-
 	// Var declarations
-	var err error
+
 	dockerBool := false
 	remoteSendBool := false
 
-	initLogging() // begins logging for runtime
-
-	// Defines config values
-	config := Config{
-		DefaultCargoportDir: DefaultCargoportDir,
-		Version:             Version,
-	}
 	// Flag definitions
 	targetDir := flag.String("target-dir", "", "Target directory to back up (Note: Can safely be run even if dir contains docker data!)")
 	dockerName := flag.String("docker-name", "", "Target Docker service name  (Note: All containers apart of the destination compose-file will be restarted!)")
@@ -246,10 +289,27 @@ func main() {
 
 	// Informational flags processed first
 	if *appVersion {
-		fmt.Printf("cargoport\n")
-		fmt.Printf("version: %s  ~  kind words cost nothing", Version)
+		fmt.Printf("cargoport  ~  kind words cost nothing\n")
+		fmt.Printf("version: %s", Version)
 		os.Exit(0)
 	}
+
+	//----------------------------------------------------------------
+	//<section>             INIT
+	//----------------------------------------------------------------
+
+	// Defines config values
+	config := Config{
+		DefaultCargoportDir: DefaultCargoportDir,
+		Version:             Version,
+	}
+
+	cargoportBase, cargoportLocal, cargoportRemote, err := initCargoportDirs(config)
+	if err != nil {
+		log.Fatalf("Error setting %s permissions for remotewrite: %v", cargoportRemote, err)
+	}
+
+	initLogging(cargoportBase) // begins logging for runtime
 
 	//----------------------------------------------------------------
 	//<section>        FLAG VALIDATIONS
@@ -298,19 +358,6 @@ func main() {
 
 	var dirName string
 
-	// Create /opt/cargoport/ & /opt/cargoport/local/ directories on local machine
-	cargoportBase := config.DefaultCargoportDir
-	cargoportLocal := filepath.Join(cargoportBase, "local")
-	cargoportRemote := filepath.Join(cargoportBase, "remote")
-
-	if err = os.MkdirAll(cargoportLocal, 0755); err != nil {
-		log.Fatalf("Error creating directory %s: %v", cargoportLocal, err)
-	}
-
-	if err = os.MkdirAll(cargoportRemote, 0755); err != nil {
-		log.Fatalf("Error creating directory %s: %v", cargoportRemote, err)
-	}
-
 	log.Println("-------------------------------------------------------------------------")
 	log.Printf("Beginning Backup Job -- cargoport %s", Version)
 
@@ -325,7 +372,7 @@ func main() {
 	// If the user passed `-docker-name`, find compose file
 	// Otherwise, if user passed `-target-dir`, check if targetDir has compose file
 	if *dockerName != "" {
-		composeFilePath, err = findComposeFile(*dockerName)
+		composeFilePath, err := findComposeFile(*dockerName)
 		if err != nil {
 			log.Fatalf("Error locating Docker Compose file: %v", err)
 		}
@@ -420,7 +467,14 @@ func main() {
 
 	// if remote send is enabled, perform transfer of compressionfile
 	if remoteSendBool {
-		sendToRemote(*remoteOutputDir, *remoteUser, *remoteHost, dirName, plannedBackupFile)
+
+		config := Config{
+			DefaultCargoportDir: DefaultCargoportDir,
+		}
+		sendToRemote(*remoteOutputDir, *remoteUser, *remoteHost, dirName, plannedBackupFile, config)
+		if err != nil {
+			log.Fatalf("Remote transfer failed: %v", err)
+		}
 		remoteSendBool = false // just to be safe tbh
 	}
 

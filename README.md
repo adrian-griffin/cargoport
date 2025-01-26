@@ -6,9 +6,9 @@ A docker compose environment backup & transfer tool, written in Go!
 - [Install](#install)
   - [Dependencies](#dependencies)
   - [Set up CargoPort](#set-up-cargoport)
-- [Example Use-Cases](#example-use-cases)
+- [Usage Examples](#usage-examples)
   - [Docker examples](#docker-examples)
-  - [Crontab use-case](#crontab-usecase)
+  - [Crontab Usage](#crontab-usage)
 - [Restoring a Cargoport Backup](#restoring-a-cargoport-backup)
 
 ---
@@ -24,7 +24,7 @@ So long as SSH keys are set up between the local machine running cargoport and t
 Recommended Typical Directory Structure Example:
 
 ```
-/opt/docker/foobar
+/srv/docker/foobar
 ├── docker-compose.yml
 ├── data1
 │    └── <some-docker-data>
@@ -103,11 +103,11 @@ cargoport version: v1.x.x
 
 ---
 
-## Example Use-Cases
+## Usage Examples
 
 Compress a copy of target directory's data, storing it elsewhere locally
 ```shell
-# Compresses `/home/agriffin/foobar` to `/opt/cargoport/local/`
+# Compresses `/home/agriffin/foobar` to `/var/cargoport/local/`
 ·> cargoport -target-dir=/home/agriffin/foobar
 ```
 
@@ -125,8 +125,8 @@ Compress a copy of target directory's data, storing it locally on another drive 
 
 Perform a local-only backup of a docker compose container directory
 ```shell
-# Stops Docker Container operating out of `/opt/docker/service1`, collects image digests, compresses data to store in default backup dir
-·> cargoport -target-dir=/opt/docker/service1
+# Stops Docker Container operating out of `/srv/docker/service1`, collects image digests, compresses data to store in default backup dir
+·> cargoport -target-dir=/srv/docker/service1
 ```
 
 Perform backup of a docker container based on docker container's name
@@ -148,7 +148,7 @@ Backup based on container name, remote send to another machine
 -remote-user=agriffin
 ```
 
-### Crontab usecase
+### Crontab usage
 Please note that crontab backups will require SSH keys between the local and target/remote machine (unless you wanna be around to enter the remote password at runtime in the middle of the night lol)
 
 These work great for nightly docker backups and copy critical docker container data to a remote machine for easy restoration in the event of an emergency, even being self contained enough to be rebuilt on the remote machine in the event the local one no longer exists.
@@ -158,7 +158,7 @@ These work great for nightly docker backups and copy critical docker container d
 # m h  dom mon dow   command
 # . . .
 ## Perform local backup on docker container every night at 1:00 AM
-0 1 * * * /usr/local/bin/cargoport -target-dir=/opt/docker/<dockername>
+0 1 * * * /usr/local/bin/cargoport -target-dir=/srv/docker/<dockername>
 ## Perform remote & local backup on target dockername every Monday at 3:10 AM (defaults to /home/agriffin/vaultwarden.bak.tar.gz on remote)
 10 3 * * MON /usr/local/bin/cargoport -docker-name=vaultwarden -remote-host=10.0.0.1 -remote-user=agriffin
 ```
@@ -169,7 +169,7 @@ These work great for nightly docker backups and copy critical docker container d
 
 First decompress file contents:
 ```shell
-·> cd /opt/cargoport/local/ && ls
+·> cd /var/cargoport/local/ && ls
 Container1.bak.tar.gz  Container2.bak.tar.gz Vaultwarden.bak.tar.gz
 # decompress target tarball
 ·> sudo tar -xzvf Vaultwarden.bak.tar.gz && ls
