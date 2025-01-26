@@ -1,6 +1,6 @@
 package main
 
-// Cargoport v0.87.60
+// Cargoport v0.87.6
 
 import (
 	"flag"
@@ -23,7 +23,7 @@ const (
 	//DefaultTargetRoot = "/opt/docker/"
 	//DefaultBackupRoot = "/opt/docker-backups/"
 	DefaultCargoportDir = "/opt/cargoport/"
-	Version             = "v0.87.60"
+	Version             = "v0.87.57"
 )
 
 // declare config struct
