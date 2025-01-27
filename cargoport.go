@@ -1,6 +1,6 @@
 package main
 
-// Cargoport v0.88.19
+// Cargoport v0.88.20
 
 import (
 	"bufio"
@@ -13,12 +13,13 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 	//"archive/tar"
 	//"compress/gzip"
 )
 
 const (
-	Version        = "v0.88.19"
+	Version        = "v0.88.20"
 	TrueConfigfile = "/etc/cargoport.conf"
 	motd           = "kind words cost nothing"
 )
@@ -597,8 +598,11 @@ func logStart(format string, args ...interface{}) {
 
 // defines log & stdout styling and content at end of backups
 func logEnd(format string, args ...interface{}) {
+
+	log.Println("-------------------------------------------------------------------------")
 	log.Printf(format, args...)
 	log.Println("-------------------------------------------------------------------------")
+	fmt.Println("-------------------------------------------------------------------------")
 	fmt.Printf(format, args...)
 	fmt.Println("-------------------------------------------------------------------------")
 }
@@ -787,7 +791,7 @@ func main() {
 
 	//<section>   Begin Backups
 	//------------
-
+	timeBeginJob := time.Now()
 	// log & print job start
 	logStart("New Backup Job    |    cargoport %s    |    <%s>\n", Version, filepath.Base(targetDirectory))
 
@@ -817,6 +821,9 @@ func main() {
 		}
 	}
 
-	//log.Printf("Successful backup job on %s\n", filepath.Base(targetDirectory))
-	logEnd("Successful backup job on %s!\n", filepath.Base(targetDirectory))
+	// job completion banner & time calculation
+	jobDuration := time.Since(timeBeginJob)
+	executionSeconds := jobDuration.Seconds()
+	//                   |        time  5.37s       |
+	logEnd("Job Success       |        time  %.2fs       |    <%s>\n", executionSeconds, filepath.Base(targetDirectory))
 }

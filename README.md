@@ -95,9 +95,10 @@ using whatever means you'd like, feel free to set the binary up for execution vi
 
 basic binary relocation example:
 ```shell
-·> mv /$GITDIR/cargoport /usr/local/bin/
+·> sudo mv cargoport /usr/local/bin/
 ·> sudo cargoport -version # Ensure cargoport is executable from other dirs:
-cargoport version: v1.x.x
+cargoport  ~  kind words cost nothing
+version: v0.88.20
 ```
 
 #### run setup wizard

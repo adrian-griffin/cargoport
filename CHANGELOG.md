@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [0.88.19] - 2025-1-26
+## [0.88.20] - 2025-1-26
 - Incorporated setuptool
 - Added configfile
 - Large logic overhauls for most docker-related functions
@@ -14,7 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Revamped all logging
 - Message of the day implementation
 - Help flag total rework
-
+- Incorporated backup job duration time to completion output
 
 ## [0.87.61] - 2025-1-25
 - Adjust custom local backup output dir logic
