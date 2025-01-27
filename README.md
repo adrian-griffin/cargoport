@@ -110,6 +110,8 @@ version: v0.88.20
 #### run setup wizard
 Run the setup utility to begin. This root directory will house logs, config, and be the default storage location for outgoing and incoming backup transfers
 
+In order to utilize the `/var/cargoport/remote` directory during transfers between machines, `cargoport -setup` should be run on both machines; otherwise a manual valid path must be passed using the `-remote-dir` flag instead
+
 Typically you will want to allow the setup wizard to create your default local config.yml file
 
 ```shell
