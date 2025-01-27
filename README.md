@@ -65,11 +65,16 @@ For more detailed instructions, please visit Go's documentation for installation
 # Note: Add to your shell's rcfile to persist
 ·> export PATH=$PATH:/usr/local/go/bin
 ```
+```shell
+# check that go is executable
+·> go version
+go version go1.22.5 linux/amd64
+```
 
 #### rsync
-For remote sending, rysnc is needed on both the local machine and the remote, debian-based instructions:
+For remote sending, rsync is needed on both the local machine and the remote, debian-based instructions:
 ```shell
-·> apt update && apt install rysnc
+·> apt update && apt install rsync
 ```
 
 #### tar
@@ -82,6 +87,7 @@ For backup compression and decompression when restoring a backup, tar is needed,
 
 #### git clone repo
 ```shell
+·> cd ~
 ·> git clone https://github.com/adrian-griffin/cargoport.git && cd cargoport
 ```
 
@@ -186,6 +192,16 @@ These work great for nightly docker backups and copy critical docker container d
 10 3 * * MON /usr/local/bin/cargoport -docker-name=vaultwarden -remote-host=10.0.0.1 -remote-user=agriffin
 ```
 
+### Extra
+
+To view the saved filesizes of your storage paths and the new backup file, use `du -sh`
+```shell
+> sudo du -sh /opt/docker/Joplin 
+1.1G    /opt/docker/Joplin
+
+> sudo du -sh /var/cargoport/local/Joplin.bak.tar.gz 
+410M    /var/cargoport/local/Joplin.bak.tar.gz
+```
 ---
 
 # Restoring a Cargoport Backup 
