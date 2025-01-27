@@ -35,7 +35,7 @@ Recommended Typical Directory Structure Example:
 
 Crucially, docker services are fully shut down prior to compression and transfer, and the current docker service image digests are stored alongside the `docker-compose.yml` file such that the currently active docker image digests are *always* tracked with each and every container backup to help facilitate restoration in a docker container failure/emergency, especially those regarding updates on images that result in database errors and dockercompose files defined using `:latest` images, as moving to a new machine may cause version mismatches with new image pulls.
 
-The newly compressed file, including the aforementioned image digests, can optionally be transferred to a remote machine securely and reliably using Rsync via the `-remote-send` flag. Cargoport *forces* SSH & TLS transport to ensure security in transit and forces checksum validations during data send & receipt to ensure no data is corrupted or altered during the remote transfer process.
+The newly compressed file, including the aforementioned image digests, can optionally be transferred to a remote machine securely and reliably. Cargoport *forces* SSH & TLS transport to ensure security in transit and forces checksum validations during data send & receipt to ensure no data is corrupted or altered during the remote transfer process.
 
 ---
 
@@ -100,6 +100,23 @@ basic binary relocation example:
 cargoport version: v1.x.x
 ```
 
+#### run setup wizard
+Run the setup utility to begin. This root directory will house logs, config, and be the default storage location for outgoing and incoming backup transfers
+
+Typically you will want to allow the setup wizard to create your default local config.yml file
+
+```shell
+·> cargoport -setup  
+Welcome to cargoport initial setup . . .
+ 
+Enter the root directory for Cargoport (default: /var/cargoport/): 
+Using root directory: /var/cargoport
+
+. . . 
+
+No config.yml found in /var/cargoport. Would you like to create one? (y/n): y
+Default config.yml created at /var/cargoport/config.yml.
+```
 
 ---
 
@@ -107,7 +124,7 @@ cargoport version: v1.x.x
 
 Compress a copy of target directory's data, storing it elsewhere locally
 ```shell
-# Compresses `/home/agriffin/foobar` to `/var/cargoport/local/`
+# Compresses `/home/agriffin/foobar/` to `/$CARGOPORT/local/foorbar.bak.tar.gz`
 ·> cargoport -target-dir=/home/agriffin/foobar
 ```
 
@@ -118,6 +135,11 @@ Compress a copy of target directory's data, storing it locally on another drive 
   -remote-user=agriffin \
   -remote-host=192.168.0.1 \
   -output-dir=/mnt/external-drive/cargoport
+```
+
+Create backup and send to remote host using defaults defined in config.yml file, skip saving to local disk
+```shell
+·> cargoport -target-dir=/path/to/dir -remote-send-defaults -skip-local
 ```
 
 ### docker examples

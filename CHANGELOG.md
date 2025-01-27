@@ -4,7 +4,17 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased]
+## [0.88.19] - 2025-1-26
+- Incorporated setuptool
+- Added configfile
+- Large logic overhauls for most docker-related functions
+- Large overauls for all remote send logic and validations
+- More robust environment setup, init environment flag 
+- Generates default config (hardcoded in source) if none is found at set root directory
+- Revamped all logging
+- Message of the day implementation
+- Help flag total rework
+
 
 ## [0.87.61] - 2025-1-25
 - Adjust custom local backup output dir logic
