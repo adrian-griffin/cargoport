@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.88.23] - 2025-1-27
+- SSH Keytool added
+- SSH Key copy tool added
+
 ## [0.88.20] - 2025-1-26
 - Incorporated setuptool
 - Added configfile

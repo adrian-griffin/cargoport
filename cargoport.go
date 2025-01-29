@@ -1,6 +1,6 @@
 package main
 
-// Cargoport v0.88.20
+// Cargoport v0.88.23
 
 import (
 	"bufio"
@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	Version        = "v0.88.20"
+	Version        = "v0.88.23"
 	TrueConfigfile = "/etc/cargoport.conf"
 	motd           = "kind words cost nothing"
 )
@@ -32,6 +32,8 @@ type ConfigFile struct {
 	RemoteHost          string
 	RemoteOutputDir     string
 	Version             string
+	SSHKeyDir           string
+	SSHKeyName          string
 }
 
 //------------------------------------------------------------
@@ -88,6 +90,10 @@ func loadConfigFile(path string) (*ConfigFile, error) {
 				return nil, fmt.Errorf("invalid boolean value for skip_local_backups: %s", value)
 			}
 			config.SkipLocal = skipLocal
+		case "ssh_key_directory":
+			config.SSHKeyDir = value
+		case "ssh_key_name":
+			config.SSHKeyName = value
 		default:
 			return nil, fmt.Errorf("unknown yaml key in config.yml: %s", key)
 		}
@@ -114,47 +120,51 @@ func initLogging(cargoportBase string) (logFilePath string) {
 }
 
 // ensures that local default cargoport dir exists; returns `cargoportBase, cargoportLocal, cargoportRemote, nil`
-func initCargoportDirs(configFile ConfigFile) (string, string, string, error) {
+func initCargoportDirs(configFile ConfigFile) (string, string, string, string, error) {
 	var err error
 
 	// Create /var/cargoport/ directories on local machine
 	cargoportBase := strings.TrimSuffix(configFile.DefaultCargoportDir, "/")
 	cargoportLocal := filepath.Join(cargoportBase, "/local")
 	cargoportRemote := filepath.Join(cargoportBase, "/remote")
+	cargoportKeys := filepath.Join(cargoportBase, "/keys")
 
-	// create /var/cargoport/
+	// create /$CARGOPORT/
 	if err = os.MkdirAll(cargoportBase, 0755); err != nil {
 		log.Fatalf("ERROR <environment>: Error creating directory %s: %v", cargoportLocal, err)
 	}
-	// create /var/cargoport/local
+	// create /$CARGOPORT/local
 	if err = os.MkdirAll(cargoportLocal, 0755); err != nil {
 		log.Fatalf("ERROR <environment>: Error creating directory %s: %v", cargoportLocal, err)
 	}
-	// create /var/cargoport/remote
+	// create /$CARGOPORT/remote
 	if err = os.MkdirAll(cargoportRemote, 0755); err != nil {
 		log.Fatalf("ERROR <environment>: Error creating directory %s: %v", cargoportRemote, err)
 	}
-
+	// create /$CARGOPORT/keys cargoportKeys
+	if err = os.MkdirAll(cargoportKeys, 0755); err != nil {
+		log.Fatalf("ERROR <environment>: Error creating directory %s: %v", cargoportKeys, err)
+	}
 	// set 777 on /var/cargoport/remote for all users to access
 	err = runCommand("chmod", "-R", "777", cargoportRemote)
 	if err != nil {
 		log.Fatalf("ERROR <environtment>: Error setting %s permissions for remotewrite: %v", cargoportRemote, err)
 	}
 
-	return cargoportBase, cargoportLocal, cargoportRemote, nil
+	return cargoportBase, cargoportLocal, cargoportRemote, cargoportKeys, nil
 }
 
 // sets up cargoport parent dirs & logging
-func initEnvironment(configFile ConfigFile) (string, string, string, string) {
+func initEnvironment(configFile ConfigFile) (string, string, string, string, string) {
 	// initialize parent cargoport dirs on system
-	cargoportBase, cargoportLocal, cargoportRemote, err := initCargoportDirs(configFile)
+	cargoportBase, cargoportLocal, cargoportRemote, cargoportKeys, err := initCargoportDirs(configFile)
 	if err != nil {
 		log.Fatalf("ERROR <environment>: Failed to initialize directories: %v", err)
 	}
 	// initialize logging
 	logFilePath := initLogging(cargoportBase)
 
-	return cargoportBase, cargoportLocal, cargoportRemote, logFilePath
+	return cargoportBase, cargoportLocal, cargoportRemote, logFilePath, cargoportKeys
 }
 
 // guided setup tool for initial init
@@ -178,28 +188,33 @@ func setupTool() {
 	}
 	fmt.Printf("Using root directory: %s\n", rootDir)
 
-	// temp configfile for setup & init
+	// walk through temp configfile for setup & init
 	configFile := ConfigFile{
 		DefaultCargoportDir: rootDir,
-		SkipLocal:           true, // Default behavior
+		SkipLocal:           true,
 		RemoteUser:          "",
 		RemoteHost:          "",
 		RemoteOutputDir:     filepath.Join(rootDir, "remote/"),
 		Version:             Version,
 	}
 
+	// detect if setup has already been run
+	// LOGIC NEEDED !!! <setup check
+
 	// init env and determine directories & logfile
-	cargoportBase, cargoportLocal, cargoportRemote, logFilePath := initEnvironment(configFile)
+	cargoportBase, cargoportLocal, cargoportRemote, logFilePath, cargoportKeys := initEnvironment(configFile)
 
 	// print new dir and logfile information
 	fmt.Printf("Base directory initialized at: %s\n", cargoportBase)
 	fmt.Printf("Local backup directory: %s\n", cargoportLocal)
 	fmt.Printf("Remote backup directory: %s\n", cargoportRemote)
 	fmt.Printf("Log file initialized at: %s\n", logFilePath)
+	fmt.Printf("Key storage initialized at: %s\n", cargoportKeys)
 
 	// check for existing config.yml
 	configFilePath := filepath.Join(cargoportBase, "config.yml")
-	// if not exist then prompt to create default config
+
+	// if DNE then prompt to create default config
 	if _, err := os.Stat(configFilePath); os.IsNotExist(err) {
 		var createConfig string
 		fmt.Printf("No config.yml found in %s. Would you like to create one? (y/n): ", cargoportBase)
@@ -218,6 +233,13 @@ func setupTool() {
 		fmt.Println("Detected existing config.yml in parent directory")
 	}
 
+	// create ssh key pair
+	sshKeyName := "cargoport_id_ed25519"
+	if err := generateSSHKeypair(cargoportKeys, sshKeyName); err != nil {
+		log.Fatalf("ERROR <keytool>: Failed to generate SSH key: %v", err)
+	}
+
+	// save true config at /etc/ reference
 	if err := saveTrueConfigReference(configFilePath); err != nil {
 		log.Fatalf("ERROR: Failed to save true config reference: %v\n", err)
 	}
@@ -233,7 +255,7 @@ func saveTrueConfigReference(configFilePath string) error {
 // create default config and write to ./config.yml
 func createDefaultConfig(configFilePath, rootDir string) error {
 	// Template for default config.yml
-	defaultConfig := fmt.Sprintf(`# [ LOCAL CARGOPORT DEFAULTS ]
+	defaultConfig := fmt.Sprintf(`# [ LOCAL DEFAULTS ]
 ## Cargoport Root Directory
 ## Please change default dir using -setup flag
 default_cargoport_directory: %s
@@ -241,14 +263,16 @@ default_cargoport_directory: %s
 ## Skip all local backups unless otherwise specified (-skip-local=false for local jobs)
 skip_local_backups: false
 
-# [ REMOTE CARGOPORT DEFAULTS]
-## Default username and host to be used for '-remote-send-defaults' flag
-## Default password cannot be set, please use SSH keys instead!
+# [ REMOTE TRANSFER DEFAULTS]
 default_remote_user: admin
-## Accepts any valid ipv4/6 address or hostname
 default_remote_host: 10.0.0.1
+default_remote_output_dir: %s/remote
 #default_remote_output_dir: "/var/cargoport/remote/"
-`, rootDir)
+
+# [ KEYTOOL DEFAULTS ]
+ssh_key_directory: %s/keys
+ssh_key_name: cargoport_id_ed25519
+`, rootDir, rootDir, rootDir)
 
 	// Write default config file
 	return os.WriteFile(configFilePath, []byte(defaultConfig), 0644)
@@ -321,16 +345,21 @@ func interpretflags(
 	configFile ConfigFile,
 ) {
 	// validate or override flags with configfile values
+
+	// if send default enabled
 	if *sendDefaults {
+		// & remote user is not empty
 		if configFile.RemoteUser != "" {
 			*remoteUser = configFile.RemoteUser
 		}
+		// & remote host is not empty
 		if configFile.RemoteHost != "" {
 			*remoteHost = configFile.RemoteHost
 		}
 
+		// if either remote user or remote host are empty
 		if configFile.RemoteUser == "" || configFile.RemoteHost == "" {
-			log.Fatalf("ERROR: Default remote host and username must be set in the configuration file to use -remote-send-defaults.")
+			log.Fatalf("ERROR <config>: Default remote host and username must be set in the configuration file to use -remote-send-defaults.")
 		}
 	}
 	// validate inputs
@@ -613,13 +642,15 @@ func logEnd(format string, args ...interface{}) {
 // wrapper function for remoteSend
 func handleRemoteTransfer(filePath, remoteUser, remoteHost, remoteOutputDir string, skipLocal bool, configFile ConfigFile) {
 
+	cargoportKey := filepath.Join(configFile.SSHKeyDir, configFile.SSHKeyName)
+
 	// ensure remote host is reachable
-	if err := checkRemoteHost(remoteHost, remoteUser); err != nil {
+	if err := checkRemoteHost(remoteHost, remoteUser, cargoportKey); err != nil {
 		log.Fatalf("ERROR <remote>: %v", err)
 	}
 
 	// proceed with remote transfer
-	err := sendToRemote(remoteOutputDir, remoteUser, remoteHost, filepath.Base(filePath), filePath, configFile)
+	err := sendToRemote(remoteOutputDir, remoteUser, remoteHost, filepath.Base(filePath), filePath, cargoportKey, configFile)
 	if err != nil {
 		log.Fatalf("ERROR <remote>: %v", err)
 	}
@@ -633,7 +664,7 @@ func handleRemoteTransfer(filePath, remoteUser, remoteHost, remoteOutputDir stri
 }
 
 // handle remote rsync transfer to another node
-func sendToRemote(passedRemotePath, passedRemoteUser, passedRemoteHost, backupFileNameBase, targetFileToTransfer string, configFile ConfigFile) error {
+func sendToRemote(passedRemotePath, passedRemoteUser, passedRemoteHost, backupFileNameBase, targetFileToTransfer, cargoportKey string, configFile ConfigFile) error {
 
 	//<section>  VALIDATIONS
 	//---------
@@ -643,6 +674,10 @@ func sendToRemote(passedRemotePath, passedRemoteUser, passedRemoteHost, backupFi
 	}
 
 	var remoteFilePath string
+
+	if _, err := os.Stat(cargoportKey); err != nil {
+		return fmt.Errorf("SSH key not found at %s: %v", cargoportKey, err)
+	}
 
 	if passedRemotePath != "" {
 		// Custom path provided at runtime
@@ -656,7 +691,10 @@ func sendToRemote(passedRemotePath, passedRemoteUser, passedRemoteHost, backupFi
 	log.Printf("Copying to remote %s@%s:%s . . .", passedRemoteUser, passedRemoteHost, remoteFilePath)
 
 	rsyncArgs := []string{
-		"-avz", "--checksum", "-e", "ssh", targetFileToTransfer,
+		"-avz",
+		"--checksum",
+		"-e", fmt.Sprintf("ssh -i %s", cargoportKey),
+		targetFileToTransfer,
 		fmt.Sprintf("%s@%s:%s", passedRemoteUser, passedRemoteHost, remoteFilePath),
 	}
 
@@ -670,21 +708,92 @@ func sendToRemote(passedRemotePath, passedRemoteUser, passedRemoteHost, backupFi
 }
 
 // determine if remote host is a valid target
-func checkRemoteHost(remoteHost, remoteUser string) error {
-	// Ping the host to check connectivity
+func checkRemoteHost(remoteHost, remoteUser, sshPrivKeypath string) error {
+	// check host via icmp
 	pingCmd := exec.Command("ping", "-c", "1", "-W", "2", remoteHost)
 	if err := pingCmd.Run(); err != nil {
 		fmt.Printf("ERROR <remote>: Target remote host %s is unreachable!\n", remoteHost)
 		return fmt.Errorf("remote host %s is unreachable", remoteHost)
 	}
 
-	// Check SSH connectivity
-	sshCmd := exec.Command("ssh", fmt.Sprintf("%s@%s", remoteUser, remoteHost), "exit")
-	if err := sshCmd.Run(); err != nil {
-		fmt.Printf("ERROR <remote>: Failed to estblish SSH connection to remote remote host at %s@%s", remoteUser, remoteHost)
-		return fmt.Errorf("failed to establish SSH connection to %s@%s", remoteUser, remoteHost)
+	// check ssh connectivity rechability using keys
+	cmd := exec.Command("ssh",
+		"-i", sshPrivKeypath,
+		"-o", "StrictHostKeyChecking=accept-new",
+		fmt.Sprintf("%s@%s", remoteUser, remoteHost),
+		"whoami",
+	)
+	out, err := cmd.Output()
+	if err != nil {
+		return fmt.Errorf("failed to connect via SSH key to %s@%s: %v", remoteUser, remoteHost, err)
+	}
+	log.Printf("SSH connection test success; remote user identity: %s\n", strings.TrimSpace(string(out)))
+	return nil
+}
+
+// <subsection>   SSH KEYTOOL FUNCTIONS
+// ------------
+// create local cargoport keypair
+func generateSSHKeypair(sshDir, keyName string) error {
+	privateKeyPath := filepath.Join(sshDir, keyName)
+	publicKeyPath := privateKeyPath + ".pub"
+
+	// if the private key already exists, do not overwrite
+	if _, err := os.Stat(privateKeyPath); err == nil {
+		log.Printf("SSH Key '%s' already exists. Skipping generation.\n", privateKeyPath)
+		fmt.Printf("SSH Key '%s' already exists. Skipping generation.\n", privateKeyPath)
+		return nil
 	}
 
+	// ensure ssh dir (e.g. /var/cargoport/.ssh) exists
+	if err := os.MkdirAll(sshDir, 0700); err != nil {
+		return fmt.Errorf("failed to create SSH directory '%s': %v", sshDir, err)
+	}
+
+	// build the ssh-keygen command
+	cmd := exec.Command("ssh-keygen",
+		"-t", "ed25519",
+		"-f", privateKeyPath,
+		"-N", "", // no passphrase for cronjobs
+		"-C", "cargoport-generated-key",
+	)
+
+	// for cleanliness, redirect stdout/stderr if desired
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to generate SSH key: %v", err)
+	}
+
+	// set private key to 600
+	if err := os.Chmod(privateKeyPath, 0600); err != nil {
+		return fmt.Errorf("failed to chmod private key: %v", err)
+	}
+
+	fmt.Printf("SSH key pair generated at: %s (public: %s)\n", privateKeyPath, publicKeyPath)
+	log.Printf("SSH key pair generated at: %s (public: %s)\n", privateKeyPath, publicKeyPath)
+	return nil
+}
+
+func copyPublicKey(sshPrivKeypath, remoteUser, remoteHost string) error {
+	// define pubkey
+	sshPubKeyPath := sshPrivKeypath + ".pub"
+
+	logStart("Copy SSH Key      |    cargoport %s    |    <target: %s>  \n", Version, remoteHost)
+
+	// utilize ssh-copy-id
+	cmd := exec.Command("ssh-copy-id", "-i", sshPubKeyPath, fmt.Sprintf("%s@%s", remoteUser, remoteHost))
+
+	// redir sshkeygen stdout to os
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to copy SSH public key to remote: %v", err)
+	}
+
+	log.Printf("Successfully installed local public key into %s@%s:~/.ssh/authorized_keys\n", remoteUser, remoteHost)
+	logEnd("SSH Key Copied    |          Complete        |    <target: %s>  \n", remoteHost)
 	return nil
 }
 
@@ -694,7 +803,8 @@ func checkRemoteHost(remoteHost, remoteUser string) error {
 
 func main() {
 
-	// define flags
+	//<section>   PARSE FLAGS
+	//------------
 	// special flags
 	appVersion := flag.Bool("version", false, "Display app version information")
 	initEnvBool := flag.Bool("setup", false, "Run setup utility")
@@ -711,7 +821,12 @@ func main() {
 	remoteOutputDir := flag.String("remote-dir", "", "Remote target directory (file saved as <remote-dir>/<file>.bak.tar.gz)")
 	sendDefaultsBool := flag.Bool("remote-send-defaults", false, "Toggles remote send functionality using configfile default creds, overrides remote-user and remote-host flags")
 
-	// custom help message
+	// ssh key flags
+	newSSHKeyBool := flag.Bool("generate-key", false, "Generate new SSH key for cargoport")
+	copySSHKeyBool := flag.Bool("copy-key", false, "Copy cargoport SSH key to remote host")
+
+	//<section>   CUSTOM HELP MESSAGE
+	//------------
 	flag.Usage = func() {
 		fmt.Println("------------------------------------------------------------------------")
 		fmt.Printf("cargoport %s  ~  %s\n", Version, motd)
@@ -749,7 +864,7 @@ func main() {
 
 	flag.Parse()
 
-	//<section>   Special Flags
+	//<section>   SPECIAL FLAGS
 	//------------
 	// issue version info
 	if *appVersion {
@@ -764,34 +879,60 @@ func main() {
 		os.Exit(0)
 	}
 
-	//<section>   Begin Environment Checks, Validations, & Map Paths
+	//<section>   LOAD CONFIG & INIT ENV
 	//------------
-
 	// determine configfile location
 	configFilePath, err := getConfigFilePath()
 	if err != nil {
 		log.Fatalf("ERROR <config>: %v\nPlease run `cargoport -setup` first!", err)
 	}
-
 	// parse config file to set defaults
 	configFile, err := loadConfigFile(configFilePath)
 	if err != nil {
 		log.Fatalf("ERROR <config>: %v", err)
 	}
 
-	// interpret already parsed flags
-	interpretflags(targetDir, dockerName, localOutputDir, skipLocal, remoteUser, remoteHost, remoteOutputDir, sendDefaultsBool, *configFile)
-
 	// init environment
-	_, cargoportLocal, _, _ := initEnvironment(*configFile)
+	_, cargoportLocal, _, _, _ := initEnvironment(*configFile)
+
+	//<section>   KEYTOOL CIRCUITS
+	//------------
+	// create new ssh keys
+	if *newSSHKeyBool {
+		sshKeyDir := configFile.SSHKeyDir
+		sshKeyName := configFile.SSHKeyName
+		if err := generateSSHKeypair(sshKeyDir, sshKeyName); err != nil {
+			log.Fatalf("ERROR: Failed to generate SSH key: %v", err)
+		}
+		os.Exit(0)
+	}
+
+	// if both remote user and remote host are specified during copy command, then proceed
+	if *copySSHKeyBool {
+		if *remoteHost == "" || *remoteUser == "" {
+			log.Fatal("Remote user and host must be specified in the config file to copy SSH key")
+		}
+		//
+		sshPrivKeypath := filepath.Join(configFile.SSHKeyDir, configFile.SSHKeyName)
+		if err := copyPublicKey(sshPrivKeypath, *remoteUser, *remoteHost); err != nil {
+			log.Fatalf("ERROR: Failed to copy SSH public key: %v", err)
+		}
+		os.Exit(0)
+	}
+
+	//<section>   Begin Backups
+	//------------
+
+	// interpret backup-related flags
+	interpretflags(targetDir, dockerName, localOutputDir, skipLocal, remoteUser, remoteHost, remoteOutputDir, sendDefaultsBool, *configFile)
 
 	// determine backup target and prepare execution context
 	targetDirectory, composeFilePath, dockerEnabled := determineBackupTarget(targetDir, dockerName)
 	backupFilePath := prepareBackupFilePath(cargoportLocal, targetDirectory, *localOutputDir, *skipLocal)
 
-	//<section>   Begin Backups
-	//------------
+	// begin backup job timer
 	timeBeginJob := time.Now()
+
 	// log & print job start
 	logStart("New Backup Job    |    cargoport %s    |    <%s>\n", Version, filepath.Base(targetDirectory))
 

@@ -15,11 +15,11 @@ A docker compose environment backup & transfer tool, written in Go!
 
 # 🚢 cargoport
 
-Performs backup on target docker compose container and its contents, storing them as a `*.bak.tar.gz` compression file in the location of your choosing, such as on another drive. Optionally, the newly compressed tarfile can be transferred to a remote machine both securely and reliably when passed flags to do so via SSH TLS encyption and checksum validation for filetransfer. 
+Performs backup on target docker compose container's data, environment, & configs, storing them within a tar compression backupfile. Cargoport can copy the new backup to a remote machine for off-prem storage both securely & reliably utilizing SSH+TLS and data checksum validations. Cargoport is built from the ground up to be utilized with crontabs to allow scheduled backups, and as such SSH keys are forced (by default) for transfers to ensure reliable backups off-hours & on a schedule.  
 
-So long as SSH keys are set up between the local machine running cargoport and the target remote machine (or only local backups used), cargoport can be called by crontabs to faciliate both local and remote backups on a schedule, being written from the ground up for this purpose.
+To help manage the SSH key aspect, Cargoport comes equipped with an ssh keytool that manages its own SSH keys for backups, and can easily share its public keys to remote target machines using the `-copy-key` flag. 
 
-**⚠️ Please Note:** Cargoport relies on the docker container design being self-encompassing, with  data volumes being mounted, and all config files, such as `DOCKERFILE`, `.env` files, etc., being stored within the same parent directory alongside the `docker-compose.yml`. This is a pretty common setup, but if volumes are mounted directly through the docker volume driver, or if there are volume mounts defined in the docker-compose file that are located elsewhere on the system, these volumes may need to be moved or the composefile moved, otherwise they *will not be included in backups*. This can prove useful when you have external large volume mounts that you do not want backed up alongside the container and its config, critical files, etc.
+**⚠️ Please Note:** Cargoport relies on the docker container design being self-encompassing, with  data volumes being mounted, and all config files, such as `DOCKERFILE`, `.env` files, etc., being stored within the same parent directory alongside the `docker-compose.yml`. This is a pretty common setup, but if volumes are mounted directly through the docker volume driver, or if there are volume mounts defined in the docker-compose file that are located elsewhere on the system than the directory housing the docker-compose file, these volumes may need to be moved or the composefile moved, otherwise they *will not be included in backups*. This can prove useful, however, when you have external large volume mounts that you do not want backed up alongside the container critical data and its config.
 
 Recommended Typical Directory Structure Example:
 
@@ -55,7 +55,8 @@ For more detailed instructions, please visit Go's documentation for installation
 # Create go dir and build dirs, wget go version tar.gz
 ·> cd ~
 ·> mkdir go && mkdir go/builds/
-# This will download Go v1.22.5 for Debian machines running AMD64 architecture, please adjust as necessary
+# This will download Go v1.22.5 for Debian machines running AMD64 architecture
+# Please adjust as necessary
 ·> cd ~/go/builds/ && wget https://go.dev/dl/go1.22.5.linux-amd64.tar.gz
 
 # Clear out any remaining or old Go install files & decompress new content into /usr/local/go
@@ -130,6 +131,12 @@ Default config.yml created at /var/cargoport/config.yml.
 ---
 
 ## Usage Examples
+
+Copy SSH Key to remote machine
+```shell
+# You will be prompted to log in via password on the remote to transfer the key
+·> cargoport -copy-key -remote-host=10.115.0.1 -remote-user=agriffin  
+```
 
 Compress a copy of target directory's data, storing it elsewhere locally
 ```shell
