@@ -45,8 +45,6 @@ func main() {
 	newSSHKeyBool := flag.Bool("generate-keypair", false, "Generate new SSH key for cargoport")
 	copySSHKeyBool := flag.Bool("copy-key", false, "Copy cargoport SSH key to remote host")
 
-	flag.Parse()
-
 	// custom help messaging
 	flag.Usage = func() {
 		fmt.Println("------------------------------------------------------------------------")
@@ -89,6 +87,8 @@ func main() {
 		fmt.Println("  cargoport -copy-key -remote-host <host> -remote-user <username>")
 		fmt.Println("\nFor more information, please see the documentation")
 	}
+
+	flag.Parse()
 
 	//<section>   SPECIAL FLAGS
 	//------------
