@@ -19,7 +19,7 @@ import (
 )
 
 const Version = "v0.88.31"
-const motd = "kind words cost nothing"
+const motd = "kind words cost nothing <3"
 
 func main() {
 
@@ -50,8 +50,8 @@ func main() {
 		fmt.Println("------------------------------------------------------------------------")
 		fmt.Printf("cargoport %s  ~  %s\n", Version, motd)
 		fmt.Println("-------------------------------------------------------------------------")
-		fmt.Println("\n[Options]")
-		fmt.Println("\n  [Setup & Info]")
+		fmt.Println("[Options]")
+		fmt.Println("  [Setup & Info]")
 		fmt.Println("     -setup")
 		fmt.Println("        Run setup utility to initialize the environment")
 		fmt.Println("     -version")

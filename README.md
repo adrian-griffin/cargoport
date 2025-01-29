@@ -35,19 +35,17 @@ Recommended Typical Directory Structure Example:
 
 Crucially, docker services are fully shut down prior to compression and transfer, and the current docker service image digests are stored alongside the `docker-compose.yml` file such that the currently active docker image digests are *always* tracked with each and every container backup to help facilitate restoration in a docker container failure/emergency, especially those regarding updates on images that result in database errors and dockercompose files defined using `:latest` images, as moving to a new machine may cause version mismatches with new image pulls.
 
-The newly compressed file, including the aforementioned image digests, can optionally be transferred to a remote machine securely and reliably. Cargoport *forces* SSH & TLS transport to ensure security in transit and forces checksum validations during data send & receipt to ensure no data is corrupted or altered during the remote transfer process.
-
 ---
 
-## Install
+# Install
 
-### Dependencies:
+## Dependencies:
 
 - For initial binary compilation, Go is needed
 - Rsync is needed for remote transfer on both nodes
 - Tar is needed on the system to allow compression and to restore completed backups
 
-#### go
+### go
 Cargoport should be compiled from raw sourcecode, and as such Go will need to be installed on your machine to build into an executable binary. 
 
 For more detailed instructions, please visit Go's documentation for installation instructions, here: https://go.dev/doc/install
@@ -72,32 +70,32 @@ For more detailed instructions, please visit Go's documentation for installation
 go version go1.22.5 linux/amd64
 ```
 
-#### rsync
+### rsync
 For remote sending, rsync is needed on both the local machine and the remote, debian-based instructions:
 ```shell
 ·> apt update && apt install rsync
 ```
 
-#### tar
+### tar
 For backup compression and decompression when restoring a backup, tar is needed, debian-based instructions:
 ```shell
 ·> apt update && apt install tar
 ```
 
-### Set up CargoPort
+## Set up CargoPort
 
-#### git clone repo
+### git clone repo
 ```shell
 ·> cd ~
 ·> git clone https://github.com/adrian-griffin/cargoport.git && cd cargoport
 ```
 
-#### build into binary
+### build into binary
 ```shell
 ·> go build cargoport.go
 ```
 
-#### add to $PATH (optional)
+### add to $PATH (optional)
 using whatever means you'd like, feel free to set the binary up for execution via your PATH to be called from anywhere on the machine, cargoport requires shell elevation/sudo for docker daemon and other filestorage interactions (this is planned to be rewritten eventually)
 
 basic binary relocation example:
@@ -108,7 +106,7 @@ cargoport  ~  kind words cost nothing
 version: v0.88.20
 ```
 
-#### run setup wizard
+### run setup wizard
 Run the setup utility to begin. This root directory will house logs, config, and be the default storage location for outgoing and incoming backup transfers
 
 In order to utilize the `/var/cargoport/remote` directory during transfers between machines, `cargoport -setup` should be run on both machines; otherwise a manual valid path must be passed using the `-remote-dir` flag instead
@@ -130,7 +128,7 @@ Default config.yml created at /var/cargoport/config.yml.
 
 ---
 
-## Usage Examples
+# Usage Examples
 
 Copy SSH Key to remote machine
 ```shell
@@ -158,7 +156,7 @@ Create backup and send to remote host using defaults defined in config.yml file,
 ·> cargoport -target-dir=/path/to/dir -remote-send-defaults -skip-local
 ```
 
-### docker examples
+## docker examples
 **⚠️ Note**: ALL backups will check for a docker-compose file in the target directory, and if found, will ensure that the docker container is stopped entirely & image digests are written to disk before performing compression. Service is restarted after backup completion.
 
 Perform a local-only backup of a docker compose container directory
@@ -186,7 +184,7 @@ Backup based on container name, remote send to another machine
 -remote-user=agriffin
 ```
 
-### Crontab usage
+## Crontab usage
 Please note that crontab backups will require SSH keys between the local and target/remote machine (unless you wanna be around to enter the remote password at runtime in the middle of the night lol)
 
 These work great for nightly docker backups and copy critical docker container data to a remote machine for easy restoration in the event of an emergency, even being self contained enough to be rebuilt on the remote machine in the event the local one no longer exists.
@@ -201,7 +199,7 @@ These work great for nightly docker backups and copy critical docker container d
 10 3 * * MON /usr/local/bin/cargoport -docker-name=vaultwarden -remote-host=10.0.0.1 -remote-user=agriffin
 ```
 
-### Extra
+## Extra
 
 To view the saved filesizes of your storage paths and the new backup file, use `du -sh`
 ```shell
