@@ -1,6 +1,6 @@
 package main
 
-// Cargoport v0.88.30
+// Cargoport v0.88.31
 
 import (
 	"flag"
@@ -18,7 +18,7 @@ import (
 	"github.com/adrian-griffin/cargoport/remote"
 )
 
-const Version = "v0.88.30"
+const Version = "v0.88.31"
 const motd = "kind words cost nothing"
 
 func main() {
@@ -42,10 +42,53 @@ func main() {
 	sendDefaultsBool := flag.Bool("remote-send-defaults", false, "Toggles remote send functionality using configfile default creds, overrides remote-user and remote-host flags")
 
 	// ssh key flags
-	newSSHKeyBool := flag.Bool("generate-key", false, "Generate new SSH key for cargoport")
+	newSSHKeyBool := flag.Bool("generate-keypair", false, "Generate new SSH key for cargoport")
 	copySSHKeyBool := flag.Bool("copy-key", false, "Copy cargoport SSH key to remote host")
 
 	flag.Parse()
+
+	// custom help messaging
+	flag.Usage = func() {
+		fmt.Println("------------------------------------------------------------------------")
+		fmt.Printf("cargoport %s  ~  %s\n", Version, motd)
+		fmt.Println("-------------------------------------------------------------------------")
+		fmt.Println("\n[Options]")
+		fmt.Println("\n  [Setup & Info]")
+		fmt.Println("     -setup")
+		fmt.Println("        Run setup utility to initialize the environment")
+		fmt.Println("     -version")
+		fmt.Println("        Display app version information")
+		fmt.Println("\n  [SSH Key Flags]")
+		fmt.Println("     -copy-key")
+		fmt.Println("        Copy public key to remote machine, must be passed with remote-host & remote-user")
+		fmt.Println("     -generate-keypair")
+		fmt.Println("        Generate a new set of SSH keys based on name & location defined in config")
+		fmt.Println("\n  [Local Backup Flags]")
+		fmt.Println("     -target-dir <dir>")
+		fmt.Println("        Target directory to back up (detects if the directory is a Docker environment)")
+		fmt.Println("     -output-dir <dir>")
+		fmt.Println("        Custom destination for local output")
+		fmt.Println("     -docker-name <name>")
+		fmt.Println("        Target Docker service name (involves all Docker containers defined in the compose file)")
+		fmt.Println("\n  [Remote Transfer Flags]")
+		fmt.Println("     -skip-local")
+		fmt.Println("        Skip local backup and only send to the remote target (Note: /tmp/ used for tempfile)")
+		fmt.Println("     -remote-user <user>")
+		fmt.Println("        Remote machine username")
+		fmt.Println("     -remote-host <host>")
+		fmt.Println("        Remote machine IP(v4/v6) address or hostname")
+		fmt.Println("     -remote-dir <dir>")
+		fmt.Println("        Remote target directory (file will save as <remote-dir>/<file>.bak.tar.gz)")
+		fmt.Println("     -remote-send-defaults")
+		fmt.Println("        Remote transfer backup using default remote values in config.yml")
+
+		fmt.Println("\n[Examples]")
+		fmt.Println("  cargoport -setup")
+		fmt.Println("  cargoport -target-dir=/path/to/dir -remote-user=admin -remote-host=<host>")
+		fmt.Println("  cargoport -docker-name=container-name -remote-send-defaults -skip-local")
+		fmt.Println("  cargoport -copy-key -remote-host <host> -remote-user <username>")
+		fmt.Println("\nFor more information, please see the documentation")
+	}
 
 	//<section>   SPECIAL FLAGS
 	//------------
