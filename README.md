@@ -43,12 +43,11 @@ Crucially, docker services are fully shut down prior to compression and transfer
 
 - For initial binary compilation, Go is needed
 - Rsync is needed for remote transfer on both nodes
-- Tar is needed on the system to allow compression and to restore completed backups
 
 ### go
 Cargoport should be compiled from raw sourcecode, and as such Go will need to be installed on your machine to build into an executable binary. 
 
-For more detailed instructions, please visit Go's documentation for installation instructions, here: https://go.dev/doc/install
+These instructions should get ya through it, but for more detailed instructions, please visit Go's documentation for installation instructions, here: https://go.dev/doc/install
 ```shell
 # Create go dir and build dirs, wget go version tar.gz
 ·> cd ~
@@ -76,34 +75,26 @@ For remote sending, rsync is needed on both the local machine and the remote, de
 ·> apt update && apt install rsync
 ```
 
-### tar
-For backup compression and decompression when restoring a backup, tar is needed, debian-based instructions:
-```shell
-·> apt update && apt install tar
-```
-
 ## Set up CargoPort
 
-### git clone repo
+### git clone repo & build into executable binary
 ```shell
+# git clone repo
 ·> cd ~
 ·> git clone https://github.com/adrian-griffin/cargoport.git && cd cargoport
-```
-
-### build into binary
-```shell
-·> go build cargoport.go
+# build into executable binary
+·> go build ./cmd/cargoport
 ```
 
 ### add to $PATH (optional)
-using whatever means you'd like, feel free to set the binary up for execution via your PATH to be called from anywhere on the machine, cargoport requires shell elevation/sudo for docker daemon and other filestorage interactions (this is planned to be rewritten eventually)
+Using whatever means you'd like, feel free to set the binary up for execution via your PATH to be called from anywhere on the machine, cargoport requires shell elevation/sudo for docker daemon and other filestorage interactions (this is planned to be rewritten)
 
 basic binary relocation example:
 ```shell
 ·> sudo mv cargoport /usr/local/bin/
 ·> sudo cargoport -version # Ensure cargoport is executable from other dirs:
 cargoport  ~  kind words cost nothing
-version: v0.88.20
+version: v1.x.x
 ```
 
 ### run setup wizard
@@ -157,7 +148,7 @@ Create backup and send to remote host using defaults defined in config.yml file,
 ```
 
 ## docker examples
-**⚠️ Note**: ALL backups will check for a docker-compose file in the target directory, and if found, will ensure that the docker container is stopped entirely & image digests are written to disk before performing compression. Service is restarted after backup completion.
+**✅ Note**: All backups will check for a docker-compose file in the target directory, and if found, will ensure that the docker container is stopped entirely & image digests are written to disk before performing compression. Service is restarted after backup completion.
 
 Perform a local-only backup of a docker compose container directory
 ```shell
@@ -185,9 +176,6 @@ Backup based on container name, remote send to another machine
 ```
 
 ## Crontab usage
-Please note that crontab backups will require SSH keys between the local and target/remote machine (unless you wanna be around to enter the remote password at runtime in the middle of the night lol)
-
-These work great for nightly docker backups and copy critical docker container data to a remote machine for easy restoration in the event of an emergency, even being self contained enough to be rebuilt on the remote machine in the event the local one no longer exists.
 ```shell
 ·> crontab -e
 # . . . 
@@ -229,7 +217,7 @@ Container1.bak.tar.gz  Container2.bak.tar.gz Vaultwarden Vaultwarden.bak.tar.gz
 If the newly output directory contained `docker-compose.yml` file during former backup process, then image digests will be stored within:
 ```shell
 ·> cat Vaultwarden/compose-img-digests.txt 
-Image: <image-id> Digest: vaultwarden/server@sha256:<image-digest>
+Image ID: <image-id>  |  Image Digest: vaultwarden/server@sha256:<image-digest>
 ```
 
 Oftentimes, activating the docker compose container from this point will do the trick, but if you run into any sort of image version issues (such as ones caused by using the `:latest` tag, compose file adjustments, etc), you can statically set the index digest in your composefile and perform a `docker compose up` once again:
