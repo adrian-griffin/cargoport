@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.88.31] - 2025-1-29
+- Docker image bugfix with not writing img digests to backup if container was down at backup execution
+
 ## [0.88.30] - 2025-1-28
 - Refactored all code into packages
 

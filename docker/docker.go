@@ -47,6 +47,10 @@ func HandleDockerPreBackup(composeFilePath string) error {
 	running, err := checkDockerRunState(composeFilePath)
 	if err != nil || !running {
 		log.Printf("WARNING <docker>: No active Docker container at target location. Proceeding with backup.")
+		// temporarily partially bring up container to gather image information
+		if err := sysutil.RunCommand("docker", "compose", "-f", composeFilePath, "up", "--no-start"); err != nil {
+			return fmt.Errorf("failed to partially bring up docker containers containers for image inspection: %v", err)
+		}
 	}
 
 	// gathers and writes images to disk
