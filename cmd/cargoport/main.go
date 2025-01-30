@@ -170,14 +170,28 @@ func main() {
 
 	err = backup.CompressDirectory(targetPath, backupFilePath)
 	if err != nil {
-		log.Fatalf("ERRPR <compression>: %v", err)
+		log.Fatalf("ERROR <compression>: %v", err)
+		if err := docker.HandleDockerPostBackup(composeFilePath); err != nil {
+			log.Fatalf("ERROR <docker>: %v", err)
+		}
 	}
 
 	// handle remote transfer
 	if *remoteHost != "" {
 		err := remote.HandleRemoteTransfer(backupFilePath, *remoteUser, *remoteHost, *remoteOutputDir, *skipLocal, *configFile)
 		if err != nil {
-			sysutil.RemoveTempFile(backupFilePath)
+			// if remote fail, then remove tempfile when skipLocal enabled
+			if *skipLocal {
+				sysutil.RemoveTempFile(backupFilePath)
+
+			}
+
+			// if remote fail, then handle post-backup docker jobs
+			if dockerEnabled {
+				if err := docker.HandleDockerPostBackup(composeFilePath); err != nil {
+					log.Fatalf("ERROR <docker>: %v", err)
+				}
+			}
 			log.Fatalf("ERROR <remote>: %v", err)
 		}
 	}
