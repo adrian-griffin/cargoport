@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [0.88.31] - 2025-1-29
+## [0.88.32] - 2025-1-29
 - Ability for block level transfers added
 
 ## [0.88.30] - 2025-1-28

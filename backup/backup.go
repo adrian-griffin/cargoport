@@ -63,7 +63,7 @@ func PrepareBackupFilePath(localBackupDir, targetDir, customOutputDir string, in
 	// if a custom local output directory is provided
 	if customOutputDir != "" {
 		if incrementalBool {
-			return filepath.Join(customOutputDir, baseName)
+			return filepath.Join(customOutputDir)
 		}
 		return filepath.Join(customOutputDir, baseName+".bak.tar.gz")
 	}
@@ -78,7 +78,7 @@ func PrepareBackupFilePath(localBackupDir, targetDir, customOutputDir string, in
 
 	// default to the localBackupDir path defined in conf
 	if incrementalBool {
-		return filepath.Join(localBackupDir, baseName)
+		return filepath.Join(localBackupDir)
 	}
 	return filepath.Join(localBackupDir, baseName+".bak.tar.gz")
 }
