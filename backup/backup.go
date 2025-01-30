@@ -106,31 +106,24 @@ func CompressDirectory(targetDir, outputFile string) error {
 	tarWriter := tar.NewWriter(gzWriter)
 	defer tarWriter.Close()
 
+	// store directory to create relative file names
 	basePath := filepath.Dir(targetDir)
-	//baseName := filepath.Base(targetDir)
-	// E.g., /some/path, and targetDir = /some/path/MyDir => we’ll store
-	// files as “MyDir/subfolder/file.txt” in the archive.
 
-	// Walk the directory recursively
+	// walk the directory recursively
 	walkPath := targetDir
 	err = filepath.Walk(walkPath, func(filePath string, info os.FileInfo, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
 		}
 
-		// Build the name to store in the tar header. We want a relative path
-		// from the directory’s parent. e.g. “MyDir/...” or “baseDir/...”.
+		// build relative path to root for directory structure
 		relPath, err := filepath.Rel(basePath, filePath)
 		if err != nil {
 			return err
 		}
 
-		// If it's a directory, just write a header with no file contents.
-		// (Tar archives do need explicit directory entries sometimes.)
+		// if dir, only write a header with no file contents
 		if info.IsDir() {
-			// The root directory always isIsDir, so we can return nil to skip
-			// writing a header for the top-level if desired. But let's proceed
-			// so that it mirrors typical `tar` behavior.
 			hdr := &tar.Header{
 				Name:     relPath + "/",
 				Mode:     int64(info.Mode()),
@@ -139,23 +132,22 @@ func CompressDirectory(targetDir, outputFile string) error {
 			}
 			return tarWriter.WriteHeader(hdr)
 		}
-
-		// Otherwise, it's a file (or symlink).
-		// Create a tar header based on file info.
+		// otherwise, it's a file or symlink
+		// create a new tar header based on file info
 		header, err := tar.FileInfoHeader(info, info.Name())
 		if err != nil {
 			return err
 		}
 
-		// Overwrite the Name field to store the correct relative path in the tar.
+		// insert relative path for Name field
 		header.Name = relPath
 
-		// Write the header
+		// write the header
 		if err := tarWriter.WriteHeader(header); err != nil {
 			return err
 		}
 
-		// If it's a regular file, copy its contents
+		// if it's a regular file, copy its contents
 		if info.Mode().IsRegular() {
 			file, err := os.Open(filePath)
 			if err != nil {
@@ -163,26 +155,21 @@ func CompressDirectory(targetDir, outputFile string) error {
 			}
 			defer file.Close()
 
-			// Copy the file data into the tar
+			// copy the file data into the tar
 			_, err = io.Copy(tarWriter, file)
 			if err != nil {
 				return err
 			}
 		}
-
-		// If it's a symlink, the `FileInfoHeader` call above would store the link target in header.Linkname.
-		// Tar won't automatically resolve or embed the link's target data, it just records the symlink info.
-
 		return nil
 	})
 	if err != nil {
-		// If any error happened during filepath.Walk or tar writing.
-		os.Remove(outputFile) // Clean up partial file
+		// if error during walk or tar writing, clean partial file
+		os.Remove(outputFile)
 		return fmt.Errorf("failed while building tarball: %v", err)
 	}
 
-	// Optionally flush and close writers
-	// (defer calls do it, but we can do an explicit flush if we want).
+	// force flush and close writers
 	if err := tarWriter.Close(); err != nil {
 		return fmt.Errorf("tar writer close error: %v", err)
 	}

@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/adrian-griffin/cargoport/environment"
+	"github.com/adrian-griffin/cargoport/keytool"
 	"github.com/adrian-griffin/cargoport/sysutil"
 )
 
@@ -48,20 +49,23 @@ func sendToRemote(passedRemotePath, passedRemoteUser, passedRemoteHost, backupFi
 
 	var remoteFilePath string
 
+	// ensure SSH key exists
 	if _, err := os.Stat(cargoportKey); err != nil {
 		return fmt.Errorf("SSH key not found at %s: %v", cargoportKey, err)
 	}
 
+	// construct remote file path
+	// fallback to config if no custom path defined
 	if passedRemotePath != "" {
-		// Custom path provided at runtime
+		// custom path provided at runtime
 		remoteFilePath = strings.TrimSuffix(passedRemotePath, "/")
 		remoteFilePath = fmt.Sprintf("%s/%s", remoteFilePath, backupFileNameBase)
 	} else {
-		// Fallback to configuration-defined path
+		// fallback to configuration-defined path
 		remoteFilePath = fmt.Sprintf("%s/remote/%s", strings.TrimSuffix(configFile.DefaultCargoportDir, "/"), backupFileNameBase)
 	}
 
-	log.Printf("Copying to remote %s@%s:%s . . .", passedRemoteUser, passedRemoteHost, remoteFilePath)
+	log.Printf("Transferring to remote %s@%s:%s . . .", passedRemoteUser, passedRemoteHost, remoteFilePath)
 
 	rsyncArgs := []string{
 		"-avz",
@@ -71,9 +75,30 @@ func sendToRemote(passedRemotePath, passedRemoteUser, passedRemoteHost, backupFi
 		fmt.Sprintf("%s@%s:%s", passedRemoteUser, passedRemoteHost, remoteFilePath),
 	}
 
-	err := sysutil.RunCommand("rsync", rsyncArgs...)
+	// run rsync and capture output
+	output, err := sysutil.RunCommandWithOutput("rsync", rsyncArgs...)
 	if err != nil {
-		return fmt.Errorf("Failed to successfully perform rsync with remote server: %v", err)
+		// check if the error message contains "password:"
+		if strings.Contains(output, "password:") {
+			fmt.Println("SSH password prompt detected. Attempting to copy SSH key...")
+			log.Println("SSH password prompt detected. Attempting to copy SSH key...")
+
+			// Copy SSH key to the remote host
+			err = keytool.CopyPublicKey(cargoportKey, passedRemoteUser, passedRemoteHost)
+			if err != nil {
+				return fmt.Errorf("failed to copy SSH key to remote host: %v", err)
+			}
+
+			// Retry rsync after copying the SSH key
+			fmt.Println("Retrying rsync with SSH key authentication...")
+			log.Println("Retrying rsync with SSH key authentication...")
+			err = sysutil.RunCommand("rsync", rsyncArgs...)
+			if err != nil {
+				return fmt.Errorf("failed to transfer file after SSH key copy: %v", err)
+			}
+		} else {
+			return fmt.Errorf("rsync failed: %v", err)
+		}
 	}
 
 	log.Printf("Compressed File Successfully Transferred to %s", passedRemoteHost)

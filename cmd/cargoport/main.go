@@ -1,6 +1,6 @@
 package main
 
-// Cargoport v0.88.32
+// Cargoport v0.88.33
 
 import (
 	"flag"
@@ -19,7 +19,7 @@ import (
 	"github.com/adrian-griffin/cargoport/sysutil"
 )
 
-const Version = "v0.88.32"
+const Version = "v0.88.33"
 const motd = "kind words cost nothing <3"
 
 func main() {
@@ -183,6 +183,7 @@ func main() {
 			// if remote fail, then remove tempfile when skipLocal enabled
 			if *skipLocal {
 				sysutil.RemoveTempFile(backupFilePath)
+				log.Fatalf("ERROR <remote>: %v", err)
 
 			}
 
