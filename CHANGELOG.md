@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Skip Local bugfixes
 - Fixed bugs with Docker container not being restarted when fatalError during backup or transfer jobs
 - Custom output dir bugfixes
+- Integrated gzip & tar functionality writers
 
 ## [0.88.30] - 2025-1-28
 - Refactored all code into packages

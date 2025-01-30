@@ -86,7 +86,7 @@ func main() {
 		fmt.Println("  cargoport -target-dir=/path/to/dir -remote-user=admin -remote-host=<host>")
 		fmt.Println("  cargoport -docker-name=container-name -remote-send-defaults -skip-local")
 		fmt.Println("  cargoport -copy-key -remote-host <host> -remote-user <username>")
-		fmt.Println("\nFor more information, please see the documentation")
+		fmt.Println("\nFor more information, please see the git repo readme")
 	}
 
 	flag.Parse()
