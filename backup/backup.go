@@ -99,7 +99,7 @@ func CompressDirectory(targetDir, outputFile string) error {
 	if err != nil {
 		log.Printf("Error compressing directory: %s/%s", parentDir, baseDir)
 		os.Remove(outputFile) // ensure partial file is cleaned up
-		return err
+		return fmt.Errorf("error compressing directory: %v", err)
 	}
 
 	// print to cli & log to logfile regarding successful directory compression

@@ -13,27 +13,27 @@ import (
 )
 
 // wrapper function for remoteSend
-func HandleRemoteTransfer(filePath, remoteUser, remoteHost, remoteOutputDir string, skipLocal bool, configFile environment.ConfigFile) {
+func HandleRemoteTransfer(filePath, remoteUser, remoteHost, remoteOutputDir string, skipLocal bool, configFile environment.ConfigFile) error {
 
 	cargoportKey := filepath.Join(configFile.SSHKeyDir, configFile.SSHKeyName)
 
 	// ensure remote host is reachable
 	if err := checkRemoteHost(remoteHost, remoteUser, cargoportKey); err != nil {
-		log.Fatalf("ERROR <remote>: %v", err)
+		return fmt.Errorf("error validation remote host prior to transfer: %v", err)
 	}
 
 	// proceed with remote transfer
 	err := sendToRemote(remoteOutputDir, remoteUser, remoteHost, filepath.Base(filePath), filePath, cargoportKey, configFile)
 	if err != nil {
-		log.Fatalf("ERROR <remote>: %v", err)
+		return fmt.Errorf("error performing transfer: %v", err)
 	}
 
 	// clean up local tempfile after transfer if skipLocal is enabled
 	if skipLocal {
-		os.Remove(filePath)
-		log.Printf("Cleaning up tempfile at %s\n", filePath)
-		fmt.Printf("Tempfile %s removed\n", filePath)
+		sysutil.RemoveTempFile(filePath)
 	}
+
+	return nil
 }
 
 // handle remote rsync transfer to another node
@@ -100,6 +100,6 @@ func checkRemoteHost(remoteHost, remoteUser, sshPrivKeypath string) error {
 	if err != nil {
 		return fmt.Errorf("failed to connect via SSH key to %s@%s: %v", remoteUser, remoteHost, err)
 	}
-	fmt.Printf("SSH connection test success; remote user identity: %s\n", strings.TrimSpace(string(out)))
+	fmt.Printf("SSH connection test success; remote user: %s\n", strings.TrimSpace(string(out)))
 	return nil
 }

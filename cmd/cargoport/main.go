@@ -1,6 +1,6 @@
 package main
 
-// Cargoport v0.88.31
+// Cargoport v0.88.32
 
 import (
 	"flag"
@@ -16,9 +16,10 @@ import (
 	"github.com/adrian-griffin/cargoport/inputhandler"
 	"github.com/adrian-griffin/cargoport/keytool"
 	"github.com/adrian-griffin/cargoport/remote"
+	"github.com/adrian-griffin/cargoport/sysutil"
 )
 
-const Version = "v0.88.31"
+const Version = "v0.88.32"
 const motd = "kind words cost nothing <3"
 
 func main() {
@@ -152,7 +153,7 @@ func main() {
 	targetPath, composeFilePath, dockerEnabled := backup.DetermineBackupTarget(targetDir, dockerName)
 
 	// prepare local backupfile & compose
-	backupFilePath := backup.PrepareBackupFilePath(cargoportLocal, targetPath, "", false)
+	backupFilePath := backup.PrepareBackupFilePath(cargoportLocal, targetPath, "", *skipLocal)
 
 	// begin backup job timer
 	timeBeginJob := time.Now()
@@ -169,12 +170,16 @@ func main() {
 
 	err = backup.CompressDirectory(targetPath, backupFilePath)
 	if err != nil {
-		log.Fatalf("Compression failed: %v", err)
+		log.Fatalf("ERRPR <compression>: %v", err)
 	}
 
 	// handle remote transfer
 	if *remoteHost != "" {
-		remote.HandleRemoteTransfer(backupFilePath, *remoteUser, *remoteHost, *remoteOutputDir, *skipLocal, *configFile)
+		err := remote.HandleRemoteTransfer(backupFilePath, *remoteUser, *remoteHost, *remoteOutputDir, *skipLocal, *configFile)
+		if err != nil {
+			sysutil.RemoveTempFile(backupFilePath)
+			log.Fatalf("ERROR <remote>: %v", err)
+		}
 	}
 
 	//<section>   Post Backup/Restarts
