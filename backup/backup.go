@@ -48,7 +48,7 @@ func DetermineBackupTarget(targetDir, dockerName *string) (string, string, bool)
 }
 
 // determines path for new backupfile based on user input
-func PrepareBackupFilePath(localBackupDir, targetDir, customOutputDir string, incrementalBool, skipLocal bool) string {
+func PrepareBackupFilePath(localBackupDir, targetDir, customOutputDir string, skipLocal bool) string {
 	// sanitize target directory
 	targetDir = strings.TrimSuffix(targetDir, "/")
 	baseName := filepath.Base(targetDir)
@@ -59,27 +59,17 @@ func PrepareBackupFilePath(localBackupDir, targetDir, customOutputDir string, in
 		baseName = "unnamed-backup"
 	}
 
-	//>> if incrementalBool then skip 'bak.tar.gz' addons, return directory path directly
 	// if a custom local output directory is provided
 	if customOutputDir != "" {
-		if incrementalBool {
-			return filepath.Join(customOutputDir)
-		}
 		return filepath.Join(customOutputDir, baseName+".bak.tar.gz")
 	}
 
 	// use os temp dir if skipLocal
 	if skipLocal {
-		if incrementalBool {
-			return "" // ~ gotta make sure i have logic to handle the empty string for upstream use
-		}
 		return filepath.Join(os.TempDir(), baseName+".bak.tar.gz")
 	}
 
 	// default to the localBackupDir path defined in conf
-	if incrementalBool {
-		return filepath.Join(localBackupDir)
-	}
 	return filepath.Join(localBackupDir, baseName+".bak.tar.gz")
 }
 
