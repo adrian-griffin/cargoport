@@ -153,7 +153,7 @@ func main() {
 	targetPath, composeFilePath, dockerEnabled := backup.DetermineBackupTarget(targetDir, dockerName)
 
 	// prepare local backupfile & compose
-	backupFilePath := backup.PrepareBackupFilePath(cargoportLocal, targetPath, "", *skipLocal)
+	backupFilePath := backup.PrepareBackupFilePath(cargoportLocal, targetPath, *localOutputDir, *skipLocal)
 
 	// begin backup job timer
 	timeBeginJob := time.Now()
