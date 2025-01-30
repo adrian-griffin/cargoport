@@ -18,7 +18,7 @@ import (
 	"github.com/adrian-griffin/cargoport/remote"
 )
 
-const Version = "v0.88.31"
+const Version = "v0.88.32"
 const motd = "kind words cost nothing <3"
 
 func main() {
@@ -33,6 +33,7 @@ func main() {
 	targetDir := flag.String("target-dir", "", "Target directory to back up (detects if the directory is a Docker environment)")
 	dockerName := flag.String("docker-name", "", "Target Docker service name (involves all Docker containers defined in the compose file)")
 	localOutputDir := flag.String("output-dir", "", "Custom destination for local output")
+	incrementalBool := flag.Bool("incremental", false, "Perform incremental & block level backup (disables compression)")
 
 	// remote transfer flags
 	skipLocal := flag.Bool("skip-local", false, "Skip local backup & only send to remote target")
@@ -56,19 +57,21 @@ func main() {
 		fmt.Println("        Run setup utility to initialize the environment")
 		fmt.Println("     -version")
 		fmt.Println("        Display app version information")
-		fmt.Println("\n  [SSH Key Flags]")
+		fmt.Println("\n  [SSH Keytool]")
 		fmt.Println("     -copy-key")
 		fmt.Println("        Copy public key to remote machine, must be passed with remote-host & remote-user")
 		fmt.Println("     -generate-keypair")
 		fmt.Println("        Generate a new set of SSH keys based on name & location defined in config")
-		fmt.Println("\n  [Local Backup Flags]")
+		fmt.Println("\n  [Backup Process Options]")
 		fmt.Println("     -target-dir <dir>")
 		fmt.Println("        Target directory to back up (detects if the directory is a Docker environment)")
 		fmt.Println("     -output-dir <dir>")
 		fmt.Println("        Custom destination for local output")
 		fmt.Println("     -docker-name <name>")
 		fmt.Println("        Target Docker service name (involves all Docker containers defined in the compose file)")
-		fmt.Println("\n  [Remote Transfer Flags]")
+		fmt.Println("     -incremental")
+		fmt.Println("        Perform incremental & block level backup (disables compression)")
+		fmt.Println("\n  [Remote Transfers]")
 		fmt.Println("     -skip-local")
 		fmt.Println("        Skip local backup and only send to the remote target (Note: /tmp/ used for tempfile)")
 		fmt.Println("     -remote-user <user>")
@@ -152,7 +155,7 @@ func main() {
 	targetPath, composeFilePath, dockerEnabled := backup.DetermineBackupTarget(targetDir, dockerName)
 
 	// prepare local backupfile & compose
-	backupFilePath := backup.PrepareBackupFilePath(cargoportLocal, targetPath, "", false)
+	backupFilePath := backup.PrepareBackupFilePath(cargoportLocal, targetPath, "", *incrementalBool, *skipLocal)
 
 	// begin backup job timer
 	timeBeginJob := time.Now()
@@ -167,9 +170,15 @@ func main() {
 		}
 	}
 
-	err = backup.CompressDirectory(targetPath, backupFilePath)
-	if err != nil {
-		log.Fatalf("Compression failed: %v", err)
+	// skip compression if incremental backups; otherwise compress directory
+	if *incrementalBool {
+		// if incremental, do nothing and skip compression
+	} else {
+		// otherwise perform compression
+		err = backup.CompressDirectory(targetPath, backupFilePath)
+		if err != nil {
+			log.Fatalf("Compression failed: %v", err)
+		}
 	}
 
 	// handle remote transfer
