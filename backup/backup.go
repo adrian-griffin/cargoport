@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/adrian-griffin/cargoport/docker"
+	"github.com/adrian-griffin/cargoport/sysutil"
 )
 
 // determines target dir for backup based on input user input
@@ -75,7 +76,7 @@ func PrepareBackupFilePath(localBackupDir, targetDir, customOutputDir string, sk
 	return filepath.Join(localBackupDir, baseName+".bak.tar.gz")
 }
 
-// compresses target directory into output file tarball
+// compresses target directory into output file tarball usin Go
 func CompressDirectory(targetDir, outputFile string) error {
 	// compress target directory
 	fmt.Println("-------------------------------------------------------------------------")
@@ -183,5 +184,46 @@ func CompressDirectory(targetDir, outputFile string) error {
 	// print to cli & log to logfile regarding successful directory compression
 	log.Printf("Contents of %s successfully compressed to %s", targetDir, outputFile)
 	fmt.Printf("Contents of %s successfully compressed to %s\n", targetDir, outputFile)
+	return nil
+}
+
+// shells out to cli to compresses target directory into output file tarball
+func ShellCompressDirectory(targetDir, outputFile string) error {
+	// compress target directory
+	fmt.Println("-------------------------------------------------------------------------")
+	fmt.Println("Compressing container directory . . .")
+	fmt.Println("-------------------------------------------------------------------------")
+	parentDir := filepath.Dir(targetDir)
+	baseDir := filepath.Base(targetDir)
+
+	// ensure base dir is valid
+	if baseDir == "" || baseDir == "." {
+		return fmt.Errorf("invalid directory structure for: %s", targetDir)
+	}
+
+	// run tar compression
+	err := sysutil.RunCommand(
+		"tar",
+		"-cvzf",
+		outputFile,
+		"-C",
+		parentDir, // Parent directory
+		baseDir,   // Directory to compress
+	)
+	if err != nil {
+		log.Printf("Error compressing directory: %s/%s", parentDir, baseDir)
+		os.Remove(outputFile) // ensure partial file is cleaned up
+		return fmt.Errorf("error compressing directory: %v", err)
+	}
+
+	// print to cli & log to logfile regarding successful directory compression
+	log.Printf("Contents of %s successfully compressed to %s",
+		targetDir,
+		outputFile,
+	)
+	fmt.Printf("Contents of %s successfully compressed to %s\n",
+		targetDir,
+		outputFile,
+	)
 	return nil
 }

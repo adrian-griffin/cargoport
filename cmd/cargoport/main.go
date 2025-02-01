@@ -1,6 +1,6 @@
 package main
 
-// Cargoport v0.88.33
+// Cargoport v0.88.34
 
 import (
 	"flag"
@@ -19,7 +19,7 @@ import (
 	"github.com/adrian-griffin/cargoport/sysutil"
 )
 
-const Version = "v0.88.33"
+const Version = "v0.88.34"
 const motd = "kind words cost nothing <3"
 
 func main() {
@@ -168,7 +168,7 @@ func main() {
 		}
 	}
 
-	err = backup.CompressDirectory(targetPath, backupFilePath)
+	err = backup.ShellCompressDirectory(targetPath, backupFilePath)
 	if err != nil {
 		log.Fatalf("ERROR <compression>: %v", err)
 		if err := docker.HandleDockerPostBackup(composeFilePath); err != nil {
