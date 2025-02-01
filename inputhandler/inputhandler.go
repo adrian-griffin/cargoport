@@ -36,19 +36,24 @@ func validateInput(targetDir, dockerName, remoteUser, remoteHost, remoteOutputDi
 
 	//<subsection>   Validate Remote Transfer Flags
 	///-----------
-	// if remote flags are set, ensure `remoteHost` is provided
-	if (*remoteUser != "" || *remoteOutputDir != "") && *remoteHost == "" {
+
+	// > Ensure that both remote host & remote user are passed when one is passed
+	// if either remote host or remote user are passed
+	if *remoteHost != "" || *remoteUser != "" {
+		// if NOT both remote host and remote user are passed, return err
+		if !(*remoteHost != "" && *remoteUser != "") {
+			return fmt.Errorf("both `-remote-host` and `-remote-user` must be passed")
+		}
+	}
+
+	// if remote output dir is set, ensure `remoteHost` or `remote-user` is provided (mutal check is validated above, easier logic lol)
+	if *remoteOutputDir != "" && (*remoteHost == "" || *remoteUser != "") {
 		return fmt.Errorf("when remote send input is supplied, a `-remote-host=<host>` is required! Supports IPv4, IPv6, and DNS resolution")
 	}
 
 	// validate `remoteHost` a valid IP address or hostname
 	if *remoteHost != "" {
 		nethandler.ValidateIP(*remoteHost)
-	}
-
-	// ensure `-remote-dir` is not set without `-remote-host` or `-remote-user`
-	if *remoteOutputDir != "" && (*remoteHost == "" || *remoteUser == "") {
-		return fmt.Errorf("error: `-remote-dir` cannot be used without specifying both `-remote-host` and `-remote-user`")
 	}
 
 	//<subsection>   Validate Backup Target Flags

@@ -27,7 +27,7 @@ func ICMPRemoteHost(remoteHost, remoteUser string) error {
 	return nil
 }
 
-func SSHTestRemoteHost(remoteUser, remoteHost, sshPrivKeypath string) error {
+func SSHTestRemoteHost(remoteHost, remoteUser, sshPrivKeypath string) error {
 	// check ssh connectivity rechability using keys
 	out, err := sysutil.RunCommandWithOutput("ssh",
 		"-i", sshPrivKeypath,
