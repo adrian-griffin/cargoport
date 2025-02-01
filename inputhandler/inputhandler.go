@@ -3,9 +3,9 @@ package inputhandler
 import (
 	"fmt"
 	"log"
-	"net"
 
 	"github.com/adrian-griffin/cargoport/environment"
+	"github.com/adrian-griffin/cargoport/nethandler"
 )
 
 // handles user input validation
@@ -43,12 +43,7 @@ func validateInput(targetDir, dockerName, remoteUser, remoteHost, remoteOutputDi
 
 	// validate `remoteHost` a valid IP address or hostname
 	if *remoteHost != "" {
-		if net.ParseIP(*remoteHost) == nil {
-			_, err := net.LookupHost(*remoteHost)
-			if err != nil {
-				return fmt.Errorf("provided host must be a valid IP(v4/v6) address or queriable hostname: %v", err)
-			}
-		}
+		nethandler.ValidateIP(*remoteHost)
 	}
 
 	// ensure `-remote-dir` is not set without `-remote-host` or `-remote-user`

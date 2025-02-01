@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
 	"github.com/adrian-griffin/cargoport/environment"
 	"github.com/adrian-griffin/cargoport/keytool"
+	"github.com/adrian-griffin/cargoport/nethandler"
 	"github.com/adrian-griffin/cargoport/sysutil"
 )
 
@@ -18,9 +18,13 @@ func HandleRemoteTransfer(filePath, remoteUser, remoteHost, remoteOutputDir stri
 
 	cargoportKey := filepath.Join(configFile.SSHKeyDir, configFile.SSHKeyName)
 
-	// ensure remote host is reachable
-	if err := checkRemoteHost(remoteHost, remoteUser, cargoportKey); err != nil {
-		return fmt.Errorf("error validation remote host prior to transfer: %v", err)
+	// try to ensure remote host is reachable via icmp
+	if err := nethandler.ICMPRemoteHost(remoteHost, remoteUser); err != nil {
+		return err //<~ gotta add icmp toggle in config+nethandler
+	}
+
+	if err := nethandler.SSHTestRemoteHost(remoteHost, remoteUser, cargoportKey); err != nil {
+		return err
 	}
 
 	// proceed with remote transfer
@@ -102,29 +106,5 @@ func sendToRemote(passedRemotePath, passedRemoteUser, passedRemoteHost, backupFi
 	}
 
 	log.Printf("Compressed File Successfully Transferred to %s", passedRemoteHost)
-	return nil
-}
-
-// determine if remote host is a valid target
-func checkRemoteHost(remoteHost, remoteUser, sshPrivKeypath string) error {
-	// check host via icmp
-	pingCmd := exec.Command("ping", "-c", "1", "-W", "2", remoteHost)
-	if err := pingCmd.Run(); err != nil {
-		fmt.Printf("ERROR <remote>: Target remote host %s is unreachable!\n", remoteHost)
-		return fmt.Errorf("remote host %s is unreachable", remoteHost)
-	}
-
-	// check ssh connectivity rechability using keys
-	cmd := exec.Command("ssh",
-		"-i", sshPrivKeypath,
-		"-o", "StrictHostKeyChecking=accept-new",
-		fmt.Sprintf("%s@%s", remoteUser, remoteHost),
-		"whoami",
-	)
-	out, err := cmd.Output()
-	if err != nil {
-		return fmt.Errorf("failed to connect via SSH key to %s@%s: %v", remoteUser, remoteHost, err)
-	}
-	fmt.Printf("SSH connection test success; remote user: %s\n", strings.TrimSpace(string(out)))
 	return nil
 }
