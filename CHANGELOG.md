@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.88.37] - 2025-2-28
+- Added bool flag for skipping docker container restart after backup
+
 ## [0.88.36] - 2025-1-31
 - Separated check ssh & check icmp
 - Added net handler package

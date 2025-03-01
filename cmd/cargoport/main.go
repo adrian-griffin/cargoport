@@ -1,6 +1,6 @@
 package main
 
-// Cargoport v0.88.36
+// Cargoport v0.88.37
 
 import (
 	"flag"
@@ -19,7 +19,7 @@ import (
 	"github.com/adrian-griffin/cargoport/sysutil"
 )
 
-const Version = "v0.88.36"
+const Version = "v0.88.37"
 const motd = "kind words cost nothing <3"
 
 func main() {
@@ -34,6 +34,7 @@ func main() {
 	targetDir := flag.String("target-dir", "", "Target directory to back up (detects if the directory is a Docker environment)")
 	dockerName := flag.String("docker-name", "", "Target Docker service name (involves all Docker containers defined in the compose file)")
 	localOutputDir := flag.String("output-dir", "", "Custom destination for local output")
+	restartDockerBool := flag.Bool("restart-docker", true, "Restart docker container after successful backup. Enabled by default")
 
 	// remote transfer flags
 	skipLocal := flag.Bool("skip-local", false, "Skip local backup & only send to remote target")
@@ -62,13 +63,15 @@ func main() {
 		fmt.Println("        Copy public key to remote machine, must be passed with remote-host & remote-user")
 		fmt.Println("     -generate-keypair")
 		fmt.Println("        Generate a new set of SSH keys based on name & location defined in config")
-		fmt.Println("\n  [Local Backup Flags]")
+		fmt.Println("\n  [Backup Flags]")
 		fmt.Println("     -target-dir <dir>")
 		fmt.Println("        Target directory to back up (detects if the directory is a Docker environment)")
 		fmt.Println("     -output-dir <dir>")
 		fmt.Println("        Custom destination for local output")
 		fmt.Println("     -docker-name <name>")
 		fmt.Println("        Target Docker service name (involves all Docker containers defined in the compose file)")
+		fmt.Println("     -restart-docker <bool>")
+		fmt.Println("        Restart docker container after successful backup. Enabled by default")
 		fmt.Println("\n  [Remote Transfer Flags]")
 		fmt.Println("     -skip-local")
 		fmt.Println("        Skip local backup and only send to the remote target (Note: /tmp/ used for tempfile)")
@@ -171,7 +174,7 @@ func main() {
 	err = backup.ShellCompressDirectory(targetPath, backupFilePath)
 	if err != nil {
 		log.Fatalf("ERROR <compression>: %v", err)
-		if err := docker.HandleDockerPostBackup(composeFilePath); err != nil {
+		if err := docker.HandleDockerPostBackup(composeFilePath, *restartDockerBool); err != nil {
 			log.Fatalf("ERROR <docker>: %v", err)
 		}
 	}
@@ -189,7 +192,7 @@ func main() {
 
 			// if remote fail, then handle post-backup docker jobs
 			if dockerEnabled {
-				if err := docker.HandleDockerPostBackup(composeFilePath); err != nil {
+				if err := docker.HandleDockerPostBackup(composeFilePath, *restartDockerBool); err != nil {
 					log.Fatalf("ERROR <docker>: %v", err)
 				}
 			}
@@ -202,7 +205,7 @@ func main() {
 
 	// handle docker post backup
 	if dockerEnabled {
-		if err := docker.HandleDockerPostBackup(composeFilePath); err != nil {
+		if err := docker.HandleDockerPostBackup(composeFilePath, *restartDockerBool); err != nil {
 			log.Fatalf("ERROR <docker>: %v", err)
 		}
 	}

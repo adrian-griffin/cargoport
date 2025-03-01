@@ -13,6 +13,12 @@ import (
 	"github.com/adrian-griffin/cargoport/sysutil"
 )
 
+// validate remote target dir & space
+func ValidateRemotePath(remoteUser, remoteHost, remoteOutputDir string)
+
+// <here> logic for validating remote target dir existence, permissions, etc.
+// as well as logic for confirming enough space on remote for transfer
+
 // wrapper function for remoteSend
 func HandleRemoteTransfer(filePath, remoteUser, remoteHost, remoteOutputDir string, skipLocal bool, configFile environment.ConfigFile) error {
 
