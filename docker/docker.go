@@ -109,6 +109,7 @@ func writeDockerImages(composeFile string, outputFile string) error {
 // handles docker container restart/turn-up commands
 func HandleDockerPostBackup(composeFilePath string, restartDockerBool bool) error {
 	if restartDockerBool == false {
+		fmt.Println("Docker restart disabled, skipping restart . . .")
 		log.Println("Docker restart disabled, skipping restart . . .")
 		return nil
 	}
