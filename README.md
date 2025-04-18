@@ -1,6 +1,10 @@
+# 🚢 cargoport 🌊
 
-A docker compose environment backup & transfer tool, written in Go!
+A 🐳 Docker compose environment backup & transfer tool, written in Go!
 
+Built from the ground up for seamless use with `cron` on Debian servers & machines.
+
+Allows easy transfer of backups to remote, off-prem machines, utilizing a built in SSH keytool to allow simple & hands-off backups on schedules.
 
 ## Table of Contents
 - [Install](#install)
@@ -13,17 +17,39 @@ A docker compose environment backup & transfer tool, written in Go!
 
 ---
 
-# 🚢 cargoport
+## ✨ Features
 
-Performs backup on target docker compose container's data, environment, & configs, storing them within a tar compression backupfile. Cargoport can copy the new backup to a remote machine for off-prem storage both securely & reliably utilizing SSH+TLS and data checksum validations. Cargoport is built from the ground up to be utilized with crontabs to allow scheduled backups, and as such SSH keys are forced (by default) for transfers to ensure reliable backups off-hours & on a schedule.  
+Handles docker service halting & backups of compose container's data, environment, & configs, storing all data in a `.tar.gz` archive by default. One of Cargoport's core design pillars is to enable easy and reliable transfer of backup data to remote machines, with the intent being that copies of containers are be portable and self-contained. 
 
-To help manage the SSH key aspect, Cargoport comes equipped with an ssh keytool that manages its own SSH keys for backups, and can easily share its public keys to remote target machines using the `-copy-key` flag. 
+✅ Minimal dependencies (just Go + rsync)
 
-**⚠️ Please Note:** Cargoport relies on the docker container design being self-encompassing, with  data volumes being mounted, and all config files, such as `DOCKERFILE`, `.env` files, etc., being stored within the same parent directory alongside the `docker-compose.yml`. This is a pretty common setup, but if volumes are mounted directly through the docker volume driver, or if there are volume mounts defined in the docker-compose file that are located elsewhere on the system than the directory housing the docker-compose file, these volumes may need to be moved or the composefile moved, otherwise they *will not be included in backups*. This can prove useful, however, when you have external large volume mounts that you do not want backed up alongside the container critical data and its config.
+🔐 SSH keytool is built-in! Cargoport handles its own SSH keys, and sharing public keys to remote targets is made easy with the `-copy-key` flag.
 
-Recommended Typical Directory Structure Example:
+🧷 Each and every backup snapshots the images & digests of the docker services, storing them alongside the `docker-compose.yml` file for easier and more reliable restoration (especially helpful when transferring between machines, pulling updates, using the `:latest` tag, etc.). 
 
-```
+📅 Cron-enabled by design, allowing both remote & local backup with one command. Ready for hands-off automation!
+
+
+**Use cases include:**
+
+- Docker services behind reverse proxies can be easily moved from machine to machine, or with failover/HA setups
+- Cloning environments for staging/testing
+- Creating remote cold backups 
+- Snapshotting or versioning services
+
+
+## ⚠️ Limitations
+
+- ❌ Does not support Docker Swarm or Kubernetes
+- ❌ No native cloud storage transfer (unless via SSH access)
+- ❌ Does not perform live or incremental backups (containers are stopped for consistency)
+
+Cargoport relies on the docker container design being self-encompassing, with data volumes and config files being mounted locally, stored within the same parent directory alongside the `docker-compose.yml`. This is a pretty common setup, but please be aware of the limitations.
+
+If your setup uses external volume mounts located elsewhere on the system, or volumes managed by the docker volume drivers, these directories **will not** be included in the backup. This can prove useful however, allowing you to exclude large, ephemeral, or non-critical data (like media libraries, cache folders, etc.)
+
+### Recommended Directory Layout 📁
+```shell
 /srv/docker/foobar
 ├── docker-compose.yml
 ├── data1
@@ -33,25 +59,23 @@ Recommended Typical Directory Structure Example:
 └── .env
 ```
 
-Crucially, docker services are fully shut down prior to compression and transfer, and the current docker service image digests are stored alongside the `docker-compose.yml` file such that the currently active docker image digests are *always* tracked with each and every container backup to help facilitate restoration in a docker container failure/emergency, especially those regarding updates on images that result in database errors and dockercompose files defined using `:latest` images, as moving to a new machine may cause version mismatches with new image pulls.
+## ⚙️ Install
 
----
-
-# Install
-
-## Dependencies:
+### Dependencies:
 
 - For initial binary compilation, Go is needed
 - Rsync is needed for remote transfer on both nodes
 
-### go
-Cargoport should be compiled from raw sourcecode, and as such Go will need to be installed on your machine to build into an executable binary. 
+#### go
+Cargoport should be compiled from raw source code, and as such Go will need to be installed on your machine to build cargoport into an executable binary. 
 
 These instructions should get ya through it, but for more detailed instructions, please visit Go's documentation for installation instructions, here: https://go.dev/doc/install
 ```shell
-# Create go dir and build dirs, wget go version tar.gz
+# Create go dir and build dirs for active user
+# wget go tar.gz
 ·> cd ~
 ·> mkdir go && mkdir go/builds/
+
 # This will download Go v1.22.5 for Debian machines running AMD64 architecture
 # Please adjust as necessary
 ·> cd ~/go/builds/ && wget https://go.dev/dl/go1.22.5.linux-amd64.tar.gz
@@ -69,15 +93,15 @@ These instructions should get ya through it, but for more detailed instructions,
 go version go1.22.5 linux/amd64
 ```
 
-### rsync
+#### rsync
 For remote sending, rsync is needed on both the local machine and the remote, debian-based instructions:
 ```shell
 ·> apt update && apt install rsync
 ```
 
-## Set up CargoPort
+### Set up CargoPort
 
-### git clone repo & build into executable binary
+#### git clone repo & build into executable binary
 ```shell
 # git clone repo
 ·> cd ~
@@ -86,7 +110,7 @@ For remote sending, rsync is needed on both the local machine and the remote, de
 ·> go build ./cmd/cargoport
 ```
 
-### add to $PATH (optional)
+#### add to $PATH (optional)
 Using whatever means you'd like, feel free to set the binary up for execution via your PATH to be called from anywhere on the machine, cargoport requires shell elevation/sudo for docker daemon and other filestorage interactions (this is planned to be rewritten)
 
 basic binary relocation example:
@@ -97,7 +121,7 @@ cargoport  ~  kind words cost nothing
 version: v1.x.x
 ```
 
-### run setup wizard
+#### run setup wizard
 Run the setup utility to begin. This root directory will house logs, config, and be the default storage location for outgoing and incoming backup transfers
 
 In order to utilize the `/var/cargoport/remote` directory during transfers between machines, `cargoport -setup` should be run on both machines; otherwise a manual valid path must be passed using the `-remote-dir` flag instead
