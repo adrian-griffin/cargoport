@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [0.88.38] - 2025-4-19
+## [0.88.39] - 2025-4-19
 - Added flag for optionally skipping docker container restarts after backup
 - Fixed issue where docker container restarts would fail to trigger after issues during the backup process 
 - Enhanced path & permission validation logic for local backup outputs
