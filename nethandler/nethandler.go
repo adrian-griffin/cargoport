@@ -8,6 +8,7 @@ import (
 	"github.com/adrian-griffin/cargoport/sysutil"
 )
 
+// validate string as valid IPv4 or IPv6 address
 func ValidateIP(remoteHost string) error {
 	if net.ParseIP(remoteHost) == nil {
 		_, err := net.LookupHost(remoteHost)
@@ -18,7 +19,7 @@ func ValidateIP(remoteHost string) error {
 	return nil
 }
 
-// determine if remote host is a valid target
+// test ICMP reachability to remote host
 func ICMPRemoteHost(remoteHost, remoteUser string) error {
 	// check host via icmp
 	if err := sysutil.RunCommand("ping", "-c", "1", "-W", "2", remoteHost); err != nil {
@@ -27,6 +28,7 @@ func ICMPRemoteHost(remoteHost, remoteUser string) error {
 	return nil
 }
 
+// test SSH connectivity to remote host
 func SSHTestRemoteHost(remoteHost, remoteUser, sshPrivKeypath string) error {
 	// check ssh connectivity rechability using keys
 	out, err := sysutil.RunCommandWithOutput("ssh",

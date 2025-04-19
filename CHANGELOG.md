@@ -4,8 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [0.88.37] - 2025-2-28
-- Added bool flag for skipping docker container restart after backup
+## [0.88.38] - 2025-4-19
+- Added flag for optionally skipping docker container restarts after backup
+- Fixed issue where docker container restarts would fail to trigger after issues during the backup process 
+- Enhanced path & permission validation logic for local backup outputs
+- Better target path determination validations
+- Better remote target validity validations
 
 ## [0.88.36] - 2025-1-31
 - Separated check ssh & check icmp

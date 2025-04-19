@@ -19,24 +19,31 @@ import (
 // <here> logic for validating remote target dir existence, permissions, etc.
 // as well as logic for confirming enough space on remote for transfer
 
-// wrapper function for remoteSend
+// wrapper function for all remote-send functions
 func HandleRemoteTransfer(filePath, remoteUser, remoteHost, remoteOutputDir string, skipLocal bool, configFile environment.ConfigFile) error {
 
+	// <here> need to add logic here to toggle off icmp & ssh tests/validations in configfile
 	cargoportKey := filepath.Join(configFile.SSHKeyDir, configFile.SSHKeyName)
+
+	// validate ip prior to continuing
+	if err := nethandler.ValidateIP(remoteHost); err != nil {
+		return fmt.Errorf("passed remote target is not a valid IPv4 or IPv6 address: %v", err)
+	}
 
 	// try to ensure remote host is reachable via icmp
 	if err := nethandler.ICMPRemoteHost(remoteHost, remoteUser); err != nil {
-		return err //<~ gotta add icmp toggle in config+nethandler
+		return fmt.Errorf("remote host is not responding to ICMP: %v", err) //<~ gotta add icmp toggle in config+nethandler
 	}
 
-	if err := nethandler.SSHTestRemoteHost(remoteHost, remoteUser, cargoportKey); err != nil {
-		return err
-	}
+	// test ssh connectivity prior to attempting rsync
+	//if err := nethandler.SSHTestRemoteHost(remoteHost, remoteUser, cargoportKey); err != nil {
+	//	return err
+	//}
 
 	// proceed with remote transfer
 	err := sendToRemote(remoteOutputDir, remoteUser, remoteHost, filepath.Base(filePath), filePath, cargoportKey, configFile)
 	if err != nil {
-		return fmt.Errorf("error performing transfer: %v", err)
+		return fmt.Errorf("error performing remote transfer: %v", err)
 	}
 
 	// clean up local tempfile after transfer if skipLocal is enabled
@@ -47,7 +54,7 @@ func HandleRemoteTransfer(filePath, remoteUser, remoteHost, remoteOutputDir stri
 	return nil
 }
 
-// handle remote rsync transfer to another node
+// handle remote rsync transfer to defined node
 func sendToRemote(passedRemotePath, passedRemoteUser, passedRemoteHost, backupFileNameBase, targetFileToTransfer, cargoportKey string, configFile environment.ConfigFile) error {
 
 	//<section>  VALIDATIONS

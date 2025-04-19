@@ -56,6 +56,11 @@ func PrepareBackupFilePath(localBackupDir, targetDir, customOutputDir string, sk
 	targetDir = strings.TrimSuffix(targetDir, "/")
 	baseName := filepath.Base(targetDir)
 
+	// validate that targetDir exists prior to continuing
+	if targetDirInfo, targetDirErr := os.Stat(targetDir); targetDirErr != nil || !targetDirInfo.IsDir() {
+		return "", fmt.Errorf("target directory %s does not exist or is not a directory: %v", targetDir, targetDirErr)
+	}
+
 	// if baseName is empty, use backup name
 	if baseName == "" || baseName == "." || baseName == ".." {
 		log.Printf("WARN <storage>: Invalid target directory name '%s', saving backup as 'unnamed-backup.bak.tar.gz'", targetDir)
@@ -99,8 +104,6 @@ func ValidateBackupFilePath(backupFilePath string) error {
 	// create & remove file, return error if file creation fails
 	testFile, err := os.Create(testFilePath)
 	if err != nil {
-		testFile.Close()
-		os.Remove(testFilePath)
 		return fmt.Errorf("cannot write to destination directory %s: %v", parentDir, err)
 	}
 	testFile.Close()

@@ -1,6 +1,6 @@
 package main
 
-// Cargoport v0.88.37
+// Cargoport v0.88.38
 
 import (
 	"flag"
@@ -19,7 +19,7 @@ import (
 	"github.com/adrian-griffin/cargoport/sysutil"
 )
 
-const Version = "v0.88.37"
+const Version = "v0.88.38"
 const motd = "kind words cost nothing <3"
 
 func main() {
@@ -174,12 +174,17 @@ func main() {
 		}
 	}
 
-	err = backup.ShellCompressDirectory(targetPath, backupFilePath)
-	if err != nil {
-		log.Fatalf("ERROR <compression>: %v", err)
-		if err := docker.HandleDockerPostBackup(composeFilePath, *restartDockerBool); err != nil {
-			log.Fatalf("ERROR <docker>: %v", err)
+	// attempt compression of data; if fail && dockerEnabled then attempt to handle docker restart
+	if err := backup.ShellCompressDirectory(targetPath, backupFilePath); err != nil {
+
+		// if docker restart fails, log error
+		if dockerEnabled {
+			if dockererr := docker.HandleDockerPostBackup(composeFilePath, *restartDockerBool); dockererr != nil {
+				log.Printf("ERROR <docker>: %v", dockererr)
+			}
 		}
+
+		log.Fatalf("ERROR <compression>: %v", err)
 	}
 
 	// handle remote transfer
@@ -218,6 +223,4 @@ func main() {
 	executionSeconds := jobDuration.Seconds()
 	//                   |        time  5.37s       |
 	environment.LogEnd("Job Success       |        time  %.2fs       |    <%s>\n", executionSeconds, filepath.Base(targetPath))
-
-	// 10) Done
 }
