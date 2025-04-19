@@ -8,8 +8,9 @@ import (
 	"github.com/adrian-griffin/cargoport/sysutil"
 )
 
-// validate string as valid IPv4 or IPv6 address
+// validate string as valid IPv4, IPv6 address, or resolvable DNS name
 func ValidateIP(remoteHost string) error {
+	// if not a valid v4 or v6 IP, attempt dns lookup
 	if net.ParseIP(remoteHost) == nil {
 		_, err := net.LookupHost(remoteHost)
 		if err != nil {

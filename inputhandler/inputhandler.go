@@ -53,7 +53,9 @@ func validateInput(targetDir, dockerName, remoteUser, remoteHost, remoteOutputDi
 
 	// validate `remoteHost` a valid IP address or hostname
 	if *remoteHost != "" {
-		nethandler.ValidateIP(*remoteHost)
+		if err := nethandler.ValidateIP(*remoteHost); err != nil {
+			return fmt.Errorf("remote host validation error: %v", err)
+		}
 	}
 
 	//<subsection>   Validate Backup Target Flags
