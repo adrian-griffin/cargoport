@@ -91,14 +91,14 @@ func InterpretFlags(
 
 		// if either remote user or remote host are empty
 		if configFile.RemoteUser == "" || configFile.RemoteHost == "" {
-			log.Printf("ERROR <config>: Default remote host and username must be set in the configuration file to use -remote-send-defaults.")
+			fmt.Printf("ERROR <config>: Default remote host and username must be set in the configuration file to use -remote-send-defaults.")
 			log.Fatalf("ERROR <config>: Default remote host and username must be set in the configuration file to use -remote-send-defaults.")
 		}
 	}
 	// validate inputs
 	err := validateInput(targetDir, dockerName, remoteUser, remoteHost, remoteOutputDir, skipLocal, configFile)
 	if err != nil {
-		log.Printf("ERROR <input>: %v", err)
+		fmt.Printf("ERROR <input>: %v", err)
 		log.Fatalf("ERROR <input>: %v", err)
 	}
 }
