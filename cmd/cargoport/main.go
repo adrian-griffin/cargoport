@@ -156,7 +156,10 @@ func main() {
 	targetPath, composeFilePath, dockerEnabled := backup.DetermineBackupTarget(targetDir, dockerName)
 
 	// prepare local backupfile & compose
-	backupFilePath := backup.PrepareBackupFilePath(cargoportLocal, targetPath, *localOutputDir, *skipLocal)
+	backupFilePath, err := backup.PrepareBackupFilePath(cargoportLocal, targetPath, *localOutputDir, *skipLocal)
+	if err != nil {
+		log.Fatalf("ERROR <storage>: Unable to prepare local backupfile output location: %v", err)
+	}
 
 	// begin backup job timer
 	timeBeginJob := time.Now()

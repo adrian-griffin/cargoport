@@ -51,7 +51,7 @@ func DetermineBackupTarget(targetDir, dockerName *string) (string, string, bool)
 }
 
 // determines path for new backupfile based on user input
-func PrepareBackupFilePath(localBackupDir, targetDir, customOutputDir string, skipLocal bool) string {
+func PrepareBackupFilePath(localBackupDir, targetDir, customOutputDir string, skipLocal bool) (string, error) {
 	// sanitize target directory
 	targetDir = strings.TrimSuffix(targetDir, "/")
 	baseName := filepath.Base(targetDir)
@@ -62,18 +62,52 @@ func PrepareBackupFilePath(localBackupDir, targetDir, customOutputDir string, sk
 		baseName = "unnamed-backup"
 	}
 
-	// if a custom local output directory is provided
-	if customOutputDir != "" {
-		return filepath.Join(customOutputDir, baseName+".bak.tar.gz")
+	backupFileName := baseName + ".bak.tar.gz"
+	var filePathString string
+
+	switch {
+	case customOutputDir != "": // if custom output dir is not empty, make custom dir the target
+		filePathString = filepath.Join(customOutputDir, backupFileName)
+	case skipLocal: // if skip local enabled, create tempfile in the os's temp dir
+		filePathString = filepath.Join(os.TempDir(), backupFileName)
+	default: // otherwise use default cargoport local dir
+		filePathString = filepath.Join(localBackupDir, backupFileName)
 	}
 
-	// use os temp dir if skipLocal
-	if skipLocal {
-		return filepath.Join(os.TempDir(), baseName+".bak.tar.gz")
+	// validate that files can be written in target output dir
+	if err := ValidateBackupFilePath(filePathString); err != nil {
+		return "", fmt.Errorf("backup file path validation failed: %v", err)
 	}
 
-	// default to the localBackupDir path defined in conf
-	return filepath.Join(localBackupDir, baseName+".bak.tar.gz")
+	return filePathString, nil
+}
+
+// validates local backup path, storage, permissions, etc.
+func ValidateBackupFilePath(backupFilePath string) error {
+
+	// firstly validate parent of determined target dir exists
+	parentDir := filepath.Dir(backupFilePath)
+	info, err := os.Stat(parentDir)
+
+	// if dir DNE, return err
+	if err != nil || !info.IsDir() {
+		return fmt.Errorf("destination path %s does not exist or is not a directory", parentDir)
+	}
+
+	// attempt to create temp local file
+	testFilePath := filepath.Join(parentDir, ".cargoport_testwrite.tmp")
+	// create & remove file, return error if file creation fails
+	testFile, err := os.Create(testFilePath)
+	if err != nil {
+		testFile.Close()
+		os.Remove(testFilePath)
+		return fmt.Errorf("cannot write to destination directory %s: %v", parentDir, err)
+	}
+	testFile.Close()
+	os.Remove(testFilePath)
+
+	// return nil if all is well
+	return nil
 }
 
 // compresses target directory into output file tarball usin Go
