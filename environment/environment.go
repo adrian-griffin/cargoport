@@ -10,6 +10,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/adrian-griffin/cargoport/keytool"
+	"github.com/adrian-griffin/cargoport/nethandler"
 	"github.com/adrian-griffin/cargoport/sysutil"
 )
 
@@ -25,7 +26,7 @@ type ConfigFile struct {
 }
 
 // system-wide config reference path
-const TrueConfigFile = "/etc/cargoport.conf"
+const ConfigFilePointer = "/etc/cargoport.conf"
 
 // defines log & stdout styling and content at start of backups
 func LogStart(format string, args ...interface{}) {
@@ -48,34 +49,49 @@ func LogEnd(format string, args ...interface{}) {
 	fmt.Println("-------------------------------------------------------------------------")
 }
 
-// determines configfile path
+// determines true configfile path
 func GetConfigFilePath() (string, error) {
-	data, err := os.ReadFile(TrueConfigFile)
+	// opens configfile pointer file to reference path to yamlfile
+	pointerFileData, err := os.ReadFile(ConfigFilePointer)
 	if err != nil {
-		return "", fmt.Errorf("could not read %s: %v", TrueConfigFile, err)
+		return "", fmt.Errorf("could not read %s: %v", ConfigFilePointer, err)
 	}
-	path := strings.TrimSpace(string(data))
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		return "", fmt.Errorf("config file path in %s does not exist: %s", TrueConfigFile, path)
+	// strings data from pointerfile and gathers path location
+	trueConfigPath := strings.TrimSpace(string(pointerFileData))
+	if _, err := os.Stat(trueConfigPath); os.IsNotExist(err) {
+		return "", fmt.Errorf("config file path in %s does not exist: %s", ConfigFilePointer, trueConfigPath)
 	}
-	return path, nil
+	return trueConfigPath, nil
 }
 
 // parse config file
 func LoadConfigFile(configFilePath string) (*ConfigFile, error) {
+	// read config data from config file
 	configFileData, err := os.ReadFile(configFilePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read config file: %w", err)
 	}
 
+	// unmarshal yaml into configfile var
 	var config ConfigFile
 	if err := yaml.Unmarshal(configFileData, &config); err != nil {
 		return nil, fmt.Errorf("failed to parse YAML config: %w", err)
 	}
 
-	// Optional: validate required fields
+	//> CFG FILE VALIDATIONS
+	// validate that default_cargoport_directory exists
 	if config.DefaultCargoportDir == "" {
 		return nil, fmt.Errorf("missing required config: default_cargoport_directory")
+	}
+
+	// validate that directory paths are valid
+	//<here> ADD LOGIC FOR SYSUTIL VALIDATEDIR FUNCTION TO BE CALLED HERE
+
+	// if remote host not empy, validate that remote host is a valid IP address or DNS name
+	if config.RemoteHost != "" {
+		if err := nethandler.ValidateIP(config.RemoteHost); err != nil {
+			return nil, fmt.Errorf("invalid required config: default_remote_host")
+		}
 	}
 
 	return &config, nil
@@ -227,7 +243,6 @@ skip_local_backups: false
 default_remote_user: admin
 default_remote_host: 10.0.0.1
 default_remote_output_dir: %s/remote
-#default_remote_output_dir: "/var/cargoport/remote/"
 
 # [ KEYTOOL DEFAULTS ]
 ssh_key_directory: %s/keys
@@ -240,5 +255,5 @@ ssh_key_name: cargoport_id_ed25519
 
 // handles writes between true configfile at /etc/ an configfile reference in declared parent dir
 func saveTrueConfigReference(configFilePath string) error {
-	return os.WriteFile(TrueConfigFile, []byte(configFilePath), 0644)
+	return os.WriteFile(ConfigFilePointer, []byte(configFilePath), 0644)
 }

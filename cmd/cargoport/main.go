@@ -114,7 +114,7 @@ func main() {
 	// determine configfile location
 	configFilePath, err := environment.GetConfigFilePath()
 	if err != nil {
-		log.Fatalf("ERROR <config>: %v\nPlease run `cargoport -setup` first!", err)
+		log.Fatalf("ERROR <config>: %v\nUnable to read config, please try cargoport -setup first!", err)
 	}
 	// parse config file to set defaults
 	configFile, err := environment.LoadConfigFile(configFilePath)
