@@ -1,27 +1,27 @@
 package environment
 
 import (
-	"bufio"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
+
+	"gopkg.in/yaml.v3"
 
 	"github.com/adrian-griffin/cargoport/keytool"
 	"github.com/adrian-griffin/cargoport/sysutil"
 )
 
 type ConfigFile struct {
-	DefaultCargoportDir string
-	SkipLocal           bool
-	RemoteUser          string
-	RemoteHost          string
-	RemoteOutputDir     string
-	Version             string
-	SSHKeyDir           string
-	SSHKeyName          string
+	DefaultCargoportDir string `yaml:"default_cargoport_directory"`
+	SkipLocal           bool   `yaml:"skip_local_backups"`
+	RemoteUser          string `yaml:"default_remote_user"`
+	RemoteHost          string `yaml:"default_remote_host"`
+	RemoteOutputDir     string `yaml:"default_remote_output_dir"`
+	Version             string `yaml:"version,omitempty"`
+	SSHKeyDir           string `yaml:"ssh_key_directory"`
+	SSHKeyName          string `yaml:"ssh_key_name"`
 }
 
 // system-wide config reference path
@@ -52,77 +52,33 @@ func LogEnd(format string, args ...interface{}) {
 func GetConfigFilePath() (string, error) {
 	data, err := os.ReadFile(TrueConfigFile)
 	if err != nil {
-		return "", fmt.Errorf("failed to locate environment: %v", err)
+		return "", fmt.Errorf("could not read %s: %v", TrueConfigFile, err)
 	}
-	configFilePath := strings.TrimSpace(string(data))
-	if _, err := os.Stat(configFilePath); os.IsNotExist(err) {
-		return "", fmt.Errorf("config file %s not found", configFilePath)
+	path := strings.TrimSpace(string(data))
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		return "", fmt.Errorf("config file path in %s does not exist: %s", TrueConfigFile, path)
 	}
-	return configFilePath, nil
+	return path, nil
 }
 
 // parse config file
-func LoadConfigFile(path string) (*ConfigFile, error) {
-	file, err := os.Open(path)
+func LoadConfigFile(configFilePath string) (*ConfigFile, error) {
+	configFileData, err := os.ReadFile(configFilePath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open config file: %v", err)
-	}
-	defer file.Close()
-
-	config := &ConfigFile{}
-	scanner := bufio.NewScanner(file)
-
-	// ~> need to work in a more robust yaml processor
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-
-		// skip comments or empty lines
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
-		}
-
-		// split keys and values
-		parts := strings.SplitN(line, ":", 2)
-
-		// validate that line is interpreted with 2 returned values
-		if len(parts) != 2 {
-			return nil, fmt.Errorf("invalid config line: %s", line)
-		}
-		key := strings.TrimSpace(parts[0])
-		value := strings.TrimSpace(parts[1])
-
-		// map keys to config fields
-		switch key {
-		case "default_cargoport_directory":
-			config.DefaultCargoportDir = value
-		case "version":
-			config.Version = value
-		case "default_remote_user":
-			config.RemoteUser = value
-		case "default_remote_host":
-			config.RemoteHost = value
-		case "default_remote_output_dir":
-			config.RemoteOutputDir = value
-		case "skip_local_backups":
-			skipLocal, err := strconv.ParseBool(value)
-			if err != nil {
-				return nil, fmt.Errorf("invalid boolean value for skip_local_backups: %s", value)
-			}
-			config.SkipLocal = skipLocal
-		case "ssh_key_directory":
-			config.SSHKeyDir = value
-		case "ssh_key_name":
-			config.SSHKeyName = value
-		default:
-			return nil, fmt.Errorf("unknown yaml key in config.yml: %s", key)
-		}
+		return nil, fmt.Errorf("failed to read config file: %w", err)
 	}
 
-	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf("error while attempting to read config file: %v", err)
+	var config ConfigFile
+	if err := yaml.Unmarshal(configFileData, &config); err != nil {
+		return nil, fmt.Errorf("failed to parse YAML config: %w", err)
 	}
 
-	return config, nil
+	// Optional: validate required fields
+	if config.DefaultCargoportDir == "" {
+		return nil, fmt.Errorf("missing required config: default_cargoport_directory")
+	}
+
+	return &config, nil
 }
 
 // sets up cargoport parent dirs & logging
