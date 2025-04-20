@@ -78,6 +78,11 @@ func InterpretFlags(
 ) {
 	// validate or override flags with configfile values
 
+	// if skip_local_backups in configfile then set skipLocal to enabled
+	if configFile.SkipLocal {
+		*skipLocal = configFile.SkipLocal
+	}
+
 	// if send default enabled
 	if *sendDefaults {
 		// & remote user is not empty

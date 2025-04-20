@@ -59,7 +59,7 @@ func GetConfigFilePath() (string, error) {
 	// strings data from pointerfile and gathers path location
 	trueConfigPath := strings.TrimSpace(string(pointerFileData))
 	if _, err := os.Stat(trueConfigPath); os.IsNotExist(err) {
-		return "", fmt.Errorf("config file path in %s does not exist: %s", ConfigFilePointer, trueConfigPath)
+		return "", fmt.Errorf("config file in path %s does not exist", trueConfigPath)
 	}
 	return trueConfigPath, nil
 }
