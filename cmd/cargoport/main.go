@@ -55,7 +55,7 @@ func main() {
 		fmt.Println("[Options]")
 		fmt.Println("  [Setup & Info]")
 		fmt.Println("     -setup")
-		fmt.Println("        Run setup utility to initialize the environment")
+		fmt.Println("        Run setup utility to init the cargoport environment (default is /var/cargoport/)")
 		fmt.Println("     -version")
 		fmt.Println("        Display app version information")
 		fmt.Println("\n  [SSH Key Flags]")

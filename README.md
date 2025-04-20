@@ -4,7 +4,7 @@ A 🐳 Docker compose environment backup & transfer tool, written in Go!
 
 Built from the ground up for seamless use with `cron` on Debian servers & machines.
 
-Allows easy transfer of backups to remote, off-prem machines, utilizing a built in SSH keytool to allow simple & hands-off backups on schedules.
+Allows easy transfer of backups to remote, off-prem machines, utilizing a built in SSH keytool for simple & hands-off backups on schedules.
 
 ## Table of Contents
 - [Install](#install)
@@ -19,15 +19,15 @@ Allows easy transfer of backups to remote, off-prem machines, utilizing a built 
 
 ## ✨ Features
 
-Handles docker service halting & backups of compose container's data, environment, & configs, storing all data in a `.tar.gz` archive by default. One of Cargoport's core design pillars is to enable easy and reliable transfer of backup data to remote machines, with the intent being that copies of containers are be portable and self-contained. 
+Handles docker service halting & backups of compose container's data, environment, & configs, storing all data in a `.tar.gz` archive by default. One of Cargoport's core design pillars is to enable easy and reliable transfer of backup data to remote machines, with the intent being that copies of containers are portable and self-contained. 
 
-✅ Minimal dependencies (just Go + rsync)
+✅ Minimal dependencies (just Go & Rsync)
 
-🔐 SSH keytool is built-in! Cargoport handles its own SSH keys, and sharing public keys to remote targets is made easy with the `-copy-key` flag.
+🔐 SSH keytool is built-in. Cargoport handles its own SSH keys, and sharing public keys to remote targets is made easy with the `-copy-key` flag.
 
 🧷 Each and every backup snapshots the images & digests of the docker services, storing them alongside the `docker-compose.yml` file for easier and more reliable restoration (especially helpful when transferring between machines, pulling updates, using the `:latest` tag, etc.). 
 
-📅 Cron-enabled by design, allowing both remote & local backup with one command. Ready for hands-off automation!
+📅 Cron-compatible by design, allowing both remote & local backup with one command. Ready for hands-off automation!
 
 
 **Use cases include:**
@@ -43,6 +43,7 @@ Handles docker service halting & backups of compose container's data, environmen
 - ❌ Does not support Docker Swarm or Kubernetes
 - ❌ No native cloud storage transfer (unless via SSH access)
 - ❌ Does not perform live or incremental backups (containers are stopped for consistency)
+- ❌ Only works with docker compose builds, docker run environments are not currently supported
 
 Cargoport relies on the docker container design being self-encompassing, with data volumes and config files being mounted locally, stored within the same parent directory alongside the `docker-compose.yml`. This is a pretty common setup, but please be aware of the limitations.
 
@@ -64,7 +65,7 @@ If your setup uses external volume mounts located elsewhere on the system, or vo
 ### Dependencies:
 
 - For initial binary compilation, Go is needed
-- Rsync is needed for remote transfer on both nodes
+- Rsync is needed on both the local node running cargoport, as well as the target machine you want to share backups with
 
 #### go
 Cargoport should be compiled from raw source code, and as such Go will need to be installed on your machine to build cargoport into an executable binary. 
@@ -101,6 +102,8 @@ For remote sending, rsync is needed on both the local machine and the remote, de
 
 ### Set up CargoPort
 
+Note that it is recommended to install Cargoport on each machine that you plan to manage/transfer backups between!
+
 #### git clone repo & build into executable binary
 ```shell
 # git clone repo
@@ -117,7 +120,7 @@ basic binary relocation example:
 ```shell
 ·> sudo mv cargoport /usr/local/bin/
 ·> sudo cargoport -version # Ensure cargoport is executable from other dirs:
-cargoport  ~  kind words cost nothing
+sudo cargoport  ~  kind words cost nothing
 version: v1.x.x
 ```
 
@@ -151,19 +154,15 @@ Copy SSH Key to remote machine
 ·> cargoport -copy-key -remote-host=10.115.0.1 -remote-user=agriffin  
 ```
 
-Compress a copy of target directory's data, storing it elsewhere locally
+Compress a copy of target directory's data, storing it in the default local backup location
 ```shell
 # Compresses `/home/agriffin/foobar/` to `/$CARGOPORT/local/foorbar.bak.tar.gz`
 ·> cargoport -target-dir=/home/agriffin/foobar
 ```
 
-Compress a copy of target directory's data, storing it locally on another drive & transferring a copy of the backup to a remote machine
+Perform backup on target directory, storing in a custom path locally, as well as remote transferring the backup to a remote machine
 ```shell
-·> cargoport \
-  -target-dir=/home/agriffin/foobar \
-  -remote-user=agriffin \
-  -remote-host=192.168.0.1 \
-  -output-dir=/mnt/external-drive/cargoport
+·> cargoport -target-dir=/home/agriffin/foobar -remote-user=agriffin -remote-host=192.168.0.1 -output-dir=/mnt/external-drive/cargoport
 ```
 
 Create backup and send to remote host using defaults defined in config.yml file, skip saving to local disk
@@ -172,15 +171,18 @@ Create backup and send to remote host using defaults defined in config.yml file,
 ```
 
 ## docker examples
-**✅ Note**: All backups will check for a docker-compose file in the target directory, and if found, will ensure that the docker container is stopped entirely & image digests are written to disk before performing compression. Service is restarted after backup completion.
 
-Perform a local-only backup of a docker compose container directory
+**✅ Note**: All backups will check for a docker-compose file in the target directory, and if found, will ensure that the docker container is stopped entirely & image digests are written to disk before performing compression. Service is restarted after backup completion by default.
+
+Docker containers can be stopped by passing the path to the directory they are hosted from within, or by specifying the name of a docker service that is running
+
+Perform a local-only backup of a target directory housing a docker compose environment
 ```shell
 # Stops Docker Container operating out of `/srv/docker/service1`, collects image digests, compresses data to store in default backup dir
 ·> cargoport -target-dir=/srv/docker/service1
 ```
 
-Perform backup of a docker container based on docker container's name
+Perform backup of a docker container based on docker service name
 
 The db service here being an example, because ALL services defined in the composefile associated with this target container will be restarted & backed up
 i.e: `container-name` will be backed up, including its associated parts, such as `container-name-db`, `container-name-web`, `container-name-etc`
@@ -232,7 +234,7 @@ Container1.bak.tar.gz  Container2.bak.tar.gz Vaultwarden.bak.tar.gz
 # decompress target tarball
 ·> sudo tar -xzvf Vaultwarden.bak.tar.gz && ls
 . . . 
-#                                             output
+#                                              output
 Container1.bak.tar.gz  Container2.bak.tar.gz Vaultwarden Vaultwarden.bak.tar.gz
 ```
 
