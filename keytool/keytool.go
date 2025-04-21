@@ -79,7 +79,7 @@ func CopyPublicKey(sshPrivKeypath, remoteUser, remoteHost string) error {
 func ValidateSSHPrivateKeyPerms(privKeyPath string) error {
 	privKeyInfo, err := os.Stat(privKeyPath)
 	if err != nil {
-		return fmt.Errorf("unable to stat key file: %w", err)
+		return fmt.Errorf("unable to locate key file: %w", err)
 	}
 
 	// validate regular filetype

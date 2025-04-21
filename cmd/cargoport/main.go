@@ -137,6 +137,7 @@ func main() {
 	// validate permissions & integrity on private key
 	sshPrivateKeyPath := filepath.Join(configFile.SSHKeyDir, configFile.SSHKeyName)
 	if err := keytool.ValidateSSHPrivateKeyPerms(sshPrivateKeyPath); err != nil {
+		fmt.Printf("ERROR <keytool>: Unable to validate SSH private key, please check configfile or create a new pair")
 		log.Fatalf("ERROR <keytool>: %v", err)
 	}
 
