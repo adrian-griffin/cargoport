@@ -87,29 +87,22 @@ func PrepareBackupFilePath(localBackupDir, targetDir, customOutputDir string, sk
 	return filePathString, nil
 }
 
-// validates local backup path, storage, permissions, etc.
+// validates local backup path existence & permissions via test writeability
 func ValidateBackupFilePath(backupFilePath string) error {
+
+	//<here> NEEDS LOGIC TO VALIDATE DIRECT DIR PERMS
 
 	// firstly validate parent of determined target dir exists
 	parentDir := filepath.Dir(backupFilePath)
-	info, err := os.Stat(parentDir)
-
-	// if dir DNE, return err
-	if err != nil || !info.IsDir() {
-		return fmt.Errorf("destination path %s does not exist or is not a directory", parentDir)
+	if err := sysutil.ValidateDirectoryString(parentDir); err != nil {
+		return fmt.Errorf("target backup path validation failed: %v", err)
 	}
 
-	// attempt to create temp local file
-	testFilePath := filepath.Join(parentDir, ".cargoport_testwrite.tmp")
-	// create & remove file, return error if file creation fails
-	testFile, err := os.Create(testFilePath)
-	if err != nil {
-		return fmt.Errorf("cannot write to destination directory %s: %v", parentDir, err)
+	// validate that the parentdir is writeable
+	if err := sysutil.ValidateDirectoryWriteable(parentDir); err != nil {
+		return fmt.Errorf("target directory is not writeable: %v", err)
 	}
-	testFile.Close()
-	os.Remove(testFilePath)
 
-	// return nil if all is well
 	return nil
 }
 

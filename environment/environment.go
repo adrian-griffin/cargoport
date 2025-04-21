@@ -79,13 +79,26 @@ func LoadConfigFile(configFilePath string) (*ConfigFile, error) {
 	}
 
 	//> CFG FILE VALIDATIONS
-	// validate that default_cargoport_directory exists
+	// validate that default_cargoport_directory is defined & valid
 	if config.DefaultCargoportDir == "" {
 		return nil, fmt.Errorf("missing required config: default_cargoport_directory")
 	}
+	if err := sysutil.ValidateDirectoryString(config.DefaultCargoportDir); err != nil {
+		return nil, fmt.Errorf("invalid path defined: default_cargoport_directory")
+	}
 
-	// validate that directory paths are valid
-	//<here> ADD LOGIC FOR SYSUTIL VALIDATEDIR FUNCTION TO BE CALLED HERE
+	// validate that SSH keydir is not empty & valid
+	if config.SSHKeyDir == "" {
+		return nil, fmt.Errorf("missing required config: ssh_key_directory")
+	}
+	if err := sysutil.ValidateDirectoryString(config.SSHKeyDir); err != nil {
+		return nil, fmt.Errorf("invalid path defined: ssh_key_directory")
+	}
+
+	// validate that SSH key name is not empty
+	if config.SSHKeyName == "" {
+		return nil, fmt.Errorf("missing required config: ssh_key_name")
+	}
 
 	// if remote host not empy, validate that remote host is a valid IP address or DNS name
 	if config.RemoteHost != "" {

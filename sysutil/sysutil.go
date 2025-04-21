@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 )
 
 // executes command on os
@@ -42,6 +43,32 @@ func RemoveTempFile(filePath string) error {
 	} else {
 		fmt.Printf("Tempfile %s removed\n", filePath)
 	}
+
+	return nil
+}
+
+func ValidateDirectoryString(directoryPathString string) error {
+	// validate directory exists
+	dirInfo, err := os.Stat(directoryPathString)
+
+	// if dir DNE or is not dirtype, return err
+	if err != nil || !dirInfo.IsDir() {
+		return fmt.Errorf("target path %s does not exist or is not a directory", directoryPathString)
+	}
+
+	return nil
+}
+
+func ValidateDirectoryWriteable(directoryPathString string) error {
+	// attempt to create temp local file
+	testFilePath := filepath.Join(directoryPathString, ".cargoport_testwrite.tmp")
+	// create & remove file, return error if file creation fails
+	testFile, err := os.Create(testFilePath)
+	if err != nil {
+		return fmt.Errorf("cannot write to destination directory %s: %v", directoryPathString, err)
+	}
+	testFile.Close()
+	os.Remove(testFilePath)
 
 	return nil
 }
