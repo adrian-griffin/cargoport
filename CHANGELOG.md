@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.88.40] - 2025-4-20
+- Major overhauls of configfile logic & framework
+- Major configfile validation & safety improvements
+- SSH key integrity checks & path validation adjustmens
+- SSH key generation improvements
+- Setup wizard tweaks
+
 ## [0.88.39] - 2025-4-19
 - Added flag for optionally skipping docker container restarts after backup
 - Fixed issue where docker container restarts would fail to trigger after issues during the backup process 
