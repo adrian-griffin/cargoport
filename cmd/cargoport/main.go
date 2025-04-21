@@ -134,6 +134,17 @@ func main() {
 		os.Exit(0)
 	}
 
+	// validate that SSH privkey exists after cfg loaded
+	sshPrivateKeyPath := filepath.Join(configFile.SSHKeyDir, configFile.SSHKeyName)
+	if _, err := os.Stat(sshPrivateKeyPath); err != nil {
+		log.Fatalf("ERROR <keytool>: %v", err)
+	}
+
+	// validate permissions & integrity on private key
+	if err := keytool.ValidateSSHPrivateKeyPerms(sshPrivateKeyPath); err != nil {
+		log.Fatalf("ERROR <keytool>: %v", err)
+	}
+
 	// if both remote user and remote host are specified during copy command, then proceed
 	if *copySSHKeyBool {
 		if *remoteHost == "" || *remoteUser == "" {
