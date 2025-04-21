@@ -87,30 +87,14 @@ func sendToRemote(passedRemotePath, passedRemoteUser, passedRemoteHost, backupFi
 		fmt.Sprintf("%s@%s:%s", passedRemoteUser, passedRemoteHost, remoteFilePath),
 	}
 
-	// run rsync and capture output
-	output, err := sysutil.RunCommandWithOutput("rsync", rsyncArgs...)
-	if err != nil {
-		// check if the error message contains "password:"
-		if strings.Contains(output, "password:") {
-			fmt.Println("SSH password prompt detected. Attempting to copy SSH key...")
-			log.Println("SSH password prompt detected. Attempting to copy SSH key...")
+	// validate ssh private key integrity
+	if err := keytool.ValidateSSHPrivateKeyPerms(cargoportKey); err != nil {
+		return fmt.Errorf("private SSH key integrity check failed, key may have been tampered with, please generate a new keypair")
+	}
 
-			// Copy SSH key to the remote host
-			err = keytool.CopyPublicKey(cargoportKey, passedRemoteUser, passedRemoteHost)
-			if err != nil {
-				return fmt.Errorf("failed to copy SSH key to remote host: %v", err)
-			}
-
-			// Retry rsync after copying the SSH key
-			fmt.Println("Retrying rsync with SSH key authentication...")
-			log.Println("Retrying rsync with SSH key authentication...")
-			err = sysutil.RunCommand("rsync", rsyncArgs...)
-			if err != nil {
-				return fmt.Errorf("failed to transfer file after SSH key copy: %v", err)
-			}
-		} else {
-			return fmt.Errorf("rsync failed: %v", err)
-		}
+	// run rsync
+	if err := sysutil.RunCommand("rsync", rsyncArgs...); err != nil {
+		return fmt.Errorf("rsync failed: %v", err)
 	}
 
 	log.Printf("Compressed File Successfully Transferred to %s", passedRemoteHost)

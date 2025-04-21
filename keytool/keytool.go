@@ -5,7 +5,9 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"os/user"
 	"path/filepath"
+	"syscall"
 )
 
 // create local cargoport keypair
@@ -51,6 +53,7 @@ func GenerateSSHKeypair(sshDir, keyName string) error {
 	return nil
 }
 
+// copy public key to remote machine
 func CopyPublicKey(sshPrivKeypath, remoteUser, remoteHost string) error {
 	// define pubkey
 	sshPubKeyPath := sshPrivKeypath + ".pub"
@@ -69,5 +72,43 @@ func CopyPublicKey(sshPrivKeypath, remoteUser, remoteHost string) error {
 
 	log.Printf("Successfully installed local public key into %s@%s:~/.ssh/authorized_keys\n", remoteUser, remoteHost)
 	//logEnd("SSH Key Copied    |          Complete        |    <target: %s>  \n", remoteHost)
+	return nil
+}
+
+// validate private key integrity
+func ValidateSSHPrivateKeyPerms(privKeyPath string) error {
+	privKeyInfo, err := os.Stat(privKeyPath)
+	if err != nil {
+		return fmt.Errorf("unable to stat key file: %w", err)
+	}
+
+	// validate regular filetype
+	if !privKeyInfo.Mode().IsRegular() {
+		return fmt.Errorf("ssh private key is not a regular file")
+	}
+
+	// validate permissions are correct
+	perms := privKeyInfo.Mode().Perm()
+	if perms > 0600 {
+		return fmt.Errorf("ssh key permissions are too open: %o (expected max 0600)", perms)
+	}
+
+	// determine file owner
+	stat, ok := privKeyInfo.Sys().(*syscall.Stat_t)
+	if !ok {
+		return fmt.Errorf("failed to get stat info for ssh key")
+	}
+
+	// determine current user
+	currentUser, err := user.Current()
+	if err != nil {
+		return fmt.Errorf("could not get current user: %w", err)
+	}
+
+	// ensure current user & file owner match
+	if fmt.Sprint(stat.Uid) != currentUser.Uid {
+		return fmt.Errorf("ssh key is not owned by the current user")
+	}
+
 	return nil
 }

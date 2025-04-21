@@ -100,6 +100,16 @@ func LoadConfigFile(configFilePath string) (*ConfigFile, error) {
 		return nil, fmt.Errorf("missing required config: ssh_key_name")
 	}
 
+	// validate that SSH privkey exists when cfg loaded
+	sshPrivateKeyPath := filepath.Join(config.SSHKeyDir, config.SSHKeyName)
+	if _, err := os.Stat(sshPrivateKeyPath); err != nil {
+		return nil, fmt.Errorf("defined SSH private key path invalid")
+	}
+
+	if err := keytool.ValidateSSHPrivateKeyPerms(sshPrivateKeyPath); err != nil {
+		return nil, fmt.Errorf("private SSH key failed integrity check, key may have been tampered with, please generate a new keypair")
+	}
+
 	// if remote host not empy, validate that remote host is a valid IP address or DNS name
 	if config.RemoteHost != "" {
 		if err := nethandler.ValidateIP(config.RemoteHost); err != nil {
