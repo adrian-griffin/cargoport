@@ -161,17 +161,20 @@ func initLogging(cargoportBase string) (logFilePath string) {
 
 // guided setup tool for initial init
 func SetupTool() {
-	fmt.Println("-- Cargoport Setup -----")
-	fmt.Println("Welcome to cargoport initial setup . . .")
+	fmt.Println("---- Cargoport Setup Wizard -----")
+	fmt.Println("Thanks for trying this out!")
 	fmt.Println(" ")
 
 	// prompt for root directory
 	var rootDir string
-	fmt.Print("Enter the root directory for Cargoport (default: /var/cargoport/): ")
+	fmt.Println("Please specify the root directory for Cargoport's data & backupfile stores")
+	fmt.Println("/var/cargoport/ works in most cases, keep the trailing `/` here:")
+	fmt.Print("Root directory (default: /var/cargoport/): ")
 	fmt.Scanln(&rootDir)
 	if rootDir == "" {
 		rootDir = "/var/cargoport/"
 	}
+	fmt.Println(" ")
 
 	// ensure that passed directory name ends in cargoport, otherwise join cargoport onto it
 	rootDir = strings.TrimSuffix(rootDir, "/")
@@ -179,6 +182,7 @@ func SetupTool() {
 		rootDir = filepath.Join(rootDir, "cargoport")
 	}
 	fmt.Printf("Using root directory: %s\n", rootDir)
+	fmt.Println(" ")
 
 	// walk through temp configfile for setup & init
 	configFile := ConfigFile{
@@ -196,11 +200,12 @@ func SetupTool() {
 	cargoportBase, cargoportLocal, cargoportRemote, logFilePath, cargoportKeys := InitEnvironment(configFile)
 
 	// print new dir and logfile information
-	fmt.Printf("Base directory initialized at: %s\n", cargoportBase)
+	fmt.Printf("Root directory initialized at: %s\n", cargoportBase)
 	fmt.Printf("Local backup directory: %s\n", cargoportLocal)
 	fmt.Printf("Remote backup directory: %s\n", cargoportRemote)
 	fmt.Printf("Log file initialized at: %s\n", logFilePath)
-	fmt.Printf("Key storage initialized at: %s\n", cargoportKeys)
+	fmt.Printf("Keytool storage: %s\n", cargoportKeys)
+	fmt.Println(" ")
 
 	// check for existing config.yml
 	configFilePath := filepath.Join(cargoportBase, "config.yml")
@@ -223,9 +228,10 @@ func SetupTool() {
 	} else {
 		fmt.Println("Detected existing config.yml in parent directory")
 	}
+	fmt.Println(" ")
 
 	// create ssh key pair
-	sshKeyName := "cargoport_id_ed25519"
+	sshKeyName := "cargoport-id-ed25519"
 	if err := keytool.GenerateSSHKeypair(cargoportKeys, sshKeyName); err != nil {
 		log.Fatalf("ERROR <keytool>: Failed to generate SSH key: %v", err)
 	}
@@ -234,6 +240,7 @@ func SetupTool() {
 	if err := saveTrueConfigReference(configFilePath); err != nil {
 		log.Fatalf("ERROR: Failed to save true config reference: %v\n", err)
 	}
+	fmt.Println(" ")
 
 	fmt.Println("Environment setup completed successfully.")
 }
