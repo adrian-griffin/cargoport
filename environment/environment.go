@@ -91,9 +91,6 @@ func LoadConfigFile(configFilePath string) (*ConfigFile, error) {
 	if config.SSHKeyDir == "" {
 		return nil, fmt.Errorf("missing required config: ssh_key_directory")
 	}
-	if err := sysutil.ValidateDirectoryString(config.SSHKeyDir); err != nil {
-		return nil, fmt.Errorf("invalid path defined: ssh_key_directory")
-	}
 
 	// validate that SSH key name is not empty
 	if config.SSHKeyName == "" {
