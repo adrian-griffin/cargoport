@@ -22,7 +22,7 @@ type ConfigFile struct {
 	RemoteOutputDir     string `yaml:"default_remote_output_dir"`
 	Version             string `yaml:"version,omitempty"`
 	SSHKeyDir           string `yaml:"ssh_key_directory"`
-	SSHKeyName          string `yaml:"ssh_key_name"`
+	SSHKeyName          string `yaml:"ssh_private_key_name"`
 }
 
 // system-wide config reference path
@@ -94,7 +94,7 @@ func LoadConfigFile(configFilePath string) (*ConfigFile, error) {
 
 	// validate that SSH key name is not empty
 	if config.SSHKeyName == "" {
-		return nil, fmt.Errorf("missing required config: ssh_key_name")
+		return nil, fmt.Errorf("missing required config: ssh_private_key_name")
 	}
 
 	// if remote host not empy, validate that remote host is a valid IP address or DNS name
@@ -242,21 +242,22 @@ func SetupTool() {
 func createDefaultConfig(configFilePath, rootDir string) error {
 	// Template for default config.yml
 	defaultConfig := fmt.Sprintf(`# [ LOCAL DEFAULTS ]
-## Cargoport Root Directory
-## Please change default dir using -setup flag
+## Please only change default directory using -setup flag
 default_cargoport_directory: %s
 
-## Skip all local backups unless otherwise specified (-skip-local=false for local jobs)
+## Skip all local backups unless otherwise specified via -skip-local=false flag
 skip_local_backups: false
 
 # [ REMOTE TRANSFER DEFAULTS]
 default_remote_user: admin
 default_remote_host: 10.0.0.1
+## Fragile, would recommend not touching this for now
+## Be sure that the remote machine has Cargoport installed as well
 default_remote_output_dir: %s/remote
 
 # [ KEYTOOL DEFAULTS ]
 ssh_key_directory: %s/keys
-ssh_key_name: cargoport_id_ed25519
+ssh_private_key_name: cargoport-id-ed25519
 `, rootDir, rootDir, rootDir)
 
 	// Write default config file
