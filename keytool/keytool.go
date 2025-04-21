@@ -32,7 +32,7 @@ func GenerateSSHKeypair(sshDir, keyName string) error {
 		"-t", "ed25519",
 		"-f", privateKeyPath,
 		"-N", "", // no passphrase for cronjobs
-		"-C", "cargoport-generated-key",
+		"-C", keyName,
 	)
 
 	// for cleanliness, redirect stdout/stderr if desired

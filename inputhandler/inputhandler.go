@@ -62,7 +62,7 @@ func validateInput(targetDir, dockerName, remoteUser, remoteHost, remoteOutputDi
 	///-----------
 	// if `skipLocal` is true, ensure remote send is configured
 	if *skipLocal && (*remoteHost == "" || *remoteUser == "") {
-		return fmt.Errorf("when skipping local backup, please ensure that a the necessary remote flags are passed")
+		return fmt.Errorf("when skipping local backup, please ensure that the necessary remote flags are passed")
 	}
 
 	return nil
