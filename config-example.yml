@@ -1,15 +1,17 @@
-# [ LOCAL CARGOPORT DEFAULTS ]
-## Cargoport Root Directory
-## Please change default dir using -setup flag
-default_cargoport_directory: %s
+# [ LOCAL DEFAULTS ]
+## Please only change default directory using -setup flag
+default_cargoport_directory: /var/cargoport
 
-## Skip all local backups unless otherwise specified (-skip-local=false for local jobs)
+## Skip all local backups unless otherwise specified via -skip-local=false flag
 skip_local_backups: false
 
-# [ REMOTE CARGOPORT DEFAULTS]
-## Default username and host to be used for '-remote-send-defaults' flag
-## Default password cannot be set, please use SSH keys instead!
-default_remote_user: admin
-## Accepts any valid ipv4/6 address or hostname
-default_remote_host: 10.0.0.1
-#default_remote_output_dir: "/var/cargoport/remote/"
+# [ REMOTE TRANSFER DEFAULTS]
+default_remote_user: agriffin
+default_remote_host: 10.115.0.133
+## Fragile, would recommend not touching this for now
+## Be sure that the remote machine has Cargoport installed as well
+default_remote_output_dir: /var/cargoport/remote
+
+# [ KEYTOOL DEFAULTS ]
+ssh_key_directory: /var/cargoport/keys
+ssh_private_key_name: cargoport-id-ed25519
