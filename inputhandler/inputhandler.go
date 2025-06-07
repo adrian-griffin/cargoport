@@ -47,7 +47,7 @@ func validateInput(targetDir, dockerName, remoteUser, remoteHost, remoteOutputDi
 	}
 
 	// if remote output dir is set, ensure `remoteHost` or `remote-user` is provided (mutal check is validated above, easier logic lol)
-	if *remoteOutputDir != "" && (*remoteHost == "" || *remoteUser != "") {
+	if *remoteOutputDir != "" && (*remoteHost == "" || *remoteUser == "") {
 		return fmt.Errorf("when remote send input is supplied, a `-remote-host=<host>` is required! Supports IPv4, IPv6, and DNS resolution")
 	}
 
