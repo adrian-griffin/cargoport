@@ -273,18 +273,21 @@ func SetupTool() {
 func createDefaultConfig(configFilePath, rootDir string) error {
 	// Template for default config.yml
 	defaultConfig := fmt.Sprintf(`# [ LOCAL DEFAULTS ]
-## Please only change default directory using -setup flag
+## Please only change this default directory using -setup flag
 default_cargoport_directory: %s
 
-## Skip all local backups unless otherwise specified via -skip-local=false flag
+## Skip all local backups by default, unless -skip-local=false is passed
 skip_local_backups: false
 
 # [ REMOTE TRANSFER DEFAULTS]
 default_remote_user: admin
 default_remote_host: 10.0.0.1
-## Fragile, would recommend not touching this for now
-## Be sure that the remote machine has Cargoport installed as well
+
+# If cargoport is also set up on the remote target machine(s), you may want use this!
+#   Otherwise use the default ~/ output
 default_remote_output_dir: %s/remote
+# default_remote_output_dir: ~/
+
 
 # [ KEYTOOL DEFAULTS ]
 ssh_key_directory: %s/keys
