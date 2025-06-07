@@ -171,15 +171,16 @@ func initLogging(cargoportBase string) (logFilePath string) {
 
 // guided setup tool for initial init
 func SetupTool() {
-	fmt.Println("  |---- Cargoport Setup Wizard -----|")
-	fmt.Println("  |-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-|")
-	fmt.Println("      Thanks for trying this out!")
-	fmt.Println("                                 ")
 
 	// validate that current UID=0 during setuptool process
 	if os.Geteuid() != 0 {
 		log.Fatalf("ERROR <environment>: The -setup command must be run as root (e.g. with sudo).")
 	}
+
+	fmt.Println("  |---- Cargoport Setup Wizard -----|")
+	fmt.Println("  |-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-|")
+	fmt.Println("      Thanks for trying this out!")
+	fmt.Println("                                 ")
 
 	// prompt for root directory
 	var rootDir string

@@ -74,7 +74,7 @@ func sendToRemote(passedRemotePath, passedRemoteUser, passedRemoteHost, backupFi
 		remoteFilePath = fmt.Sprintf("%s/%s", remoteFilePath, backupFileNameBase)
 	} else {
 		// fallback to configuration-defined path
-		remoteFilePath = fmt.Sprintf("%s/remote/%s", strings.TrimSuffix(configFile.DefaultCargoportDir, "/"), backupFileNameBase)
+		remoteFilePath = fmt.Sprintf("~/%s", backupFileNameBase)
 	}
 
 	log.Printf("Transferring to remote %s@%s:%s . . .", passedRemoteUser, passedRemoteHost, remoteFilePath)

@@ -83,6 +83,11 @@ func InterpretFlags(
 		*skipLocal = configFile.SkipLocal
 	}
 
+	// if remote output dir is empty, use configfile defaults
+	if *remoteOutputDir == "" {
+		*remoteOutputDir = configFile.RemoteOutputDir
+	}
+
 	// if send default enabled
 	if *sendDefaults {
 		// & remote user is not empty
@@ -100,6 +105,7 @@ func InterpretFlags(
 			log.Fatalf("ERROR <config>: Default remote host and username must be set in the configuration file to use -remote-send-defaults.")
 		}
 	}
+
 	// validate inputs
 	err := validateInput(targetDir, dockerName, remoteUser, remoteHost, remoteOutputDir, skipLocal, configFile)
 	if err != nil {
