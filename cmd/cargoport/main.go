@@ -1,6 +1,6 @@
 package main
 
-// Cargoport v0.88.40
+// Cargoport v0.89.40
 
 import (
 	"flag"
@@ -19,7 +19,7 @@ import (
 	"github.com/adrian-griffin/cargoport/sysutil"
 )
 
-const Version = "v0.88.40"
+const Version = "v0.89.40"
 const motd = "kind words cost nothing <3"
 
 func main() {
