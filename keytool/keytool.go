@@ -8,6 +8,7 @@ import (
 	"os/user"
 	"path/filepath"
 	"syscall"
+	"time"
 )
 
 // create local cargoport keypair
@@ -27,12 +28,26 @@ func GenerateSSHKeypair(sshDir, keyName string) error {
 		return fmt.Errorf("failed to create SSH directory '%s': %v", sshDir, err)
 	}
 
+	// detect os/system hostname for use in key comment
+	hostName, err := os.Hostname()
+
+	if err != nil {
+		return fmt.Errorf("failed to gather system hostname: %v", err)
+	}
+
+	// get current date & time
+	currentDate := time.Now()
+	// format date for key comment
+	formattedDate := currentDate.Format("02-Jan-06")
+	// build comment for key based on hostname & date
+	keyComment := fmt.Sprintf("%s-cargoport-key-%s", hostName, formattedDate)
+
 	// build the ssh-keygen command
 	cmd := exec.Command("ssh-keygen",
 		"-t", "ed25519",
 		"-f", privateKeyPath,
 		"-N", "", // no passphrase for cronjobs
-		"-C", keyName,
+		"-C", keyComment,
 	)
 
 	// for cleanliness, redirect stdout/stderr if desired

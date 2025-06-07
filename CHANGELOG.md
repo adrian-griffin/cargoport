@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.89.40] - 2025-6-6
+- Added hostname & creation date information to generated SSH key comments
+- Adjusted wizard SSH key, configfile, etc. validation logic
+- Setup wizard verbiage and output adjustments
+
 ## [0.88.40] - 2025-4-20
 - Major overhauls of configfile logic & framework
 - Major configfile validation & safety improvements
