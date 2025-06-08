@@ -195,9 +195,9 @@ func SetupTool() {
 		log.Fatalf("The -setup command must be run as root (e.g. with sudo).")
 	}
 
-	fmt.Println("  |---- Cargoport Setup Wizard -----|")
-	fmt.Println("  |-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-|")
-	fmt.Println("      Thanks for trying this out!")
+	fmt.Println("|---- Cargoport Setup Wizard -----|")
+	fmt.Println("|-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-|")
+	fmt.Println("    Thanks for trying this out!")
 	fmt.Println("                                 ")
 
 	// prompt for root directory
@@ -206,10 +206,12 @@ func SetupTool() {
 	fmt.Println("Leave blank for /var/cargoport, which works in most cases")
 	fmt.Println(" ")
 	fmt.Print("Root directory (default: /var/cargoport): ")
+	fmt.Println(" ")
 	fmt.Scanln(&rootDir)
 	if rootDir == "" {
 		rootDir = "/var/cargoport/"
 	}
+	fmt.Println(" ")
 	fmt.Println("------")
 	fmt.Println(" ")
 
@@ -220,6 +222,7 @@ func SetupTool() {
 	}
 	fmt.Printf("Using root dir: %s\n", rootDir)
 	fmt.Println(" ")
+	time.Sleep(1 * time.Second) // forced slowdowns for readability
 
 	// walk through temp configfile for setup & init
 	configFile := ConfigFile{
@@ -239,8 +242,10 @@ func SetupTool() {
 	fmt.Printf("Keytool storage: %s\n", cargoportKeys)
 	fmt.Printf("Log file initialized at: %s\n", logFilePath)
 
+	fmt.Println(" ")
 	fmt.Println("------")
 	fmt.Println(" ")
+	time.Sleep(2 * time.Second)
 
 	// check for existing config.yml
 	configFilePath := filepath.Join(cargoportBase, "config.yml")
@@ -249,6 +254,7 @@ func SetupTool() {
 	if _, err := os.Stat(configFilePath); os.IsNotExist(err) {
 		for {
 			fmt.Printf("No config.yml found in %s. Would you like to create one? (y/n): ", cargoportBase)
+			fmt.Println(" ")
 			var createConfig string
 			// scan for input
 			fmt.Scanln(&createConfig)
@@ -260,8 +266,7 @@ func SetupTool() {
 				if err != nil {
 					log.Fatalf("ERROR: Failed to create config.yml %v", err)
 				}
-				log.Println("INFO <environment>: Default config.yml created at %s", configFilePath)
-				fmt.Println("Default config.yml created at %s", configFilePath)
+				fmt.Printf("Default config.yml created at %s", configFilePath)
 				break
 
 			case "n":
@@ -276,6 +281,7 @@ func SetupTool() {
 		}
 	}
 	fmt.Println(" ")
+	time.Sleep(1 * time.Second)
 
 	// create ssh key pair
 	sshKeyName := "cargoport-id-ed25519"
@@ -289,8 +295,10 @@ func SetupTool() {
 	}
 	fmt.Println("------")
 	fmt.Println(" ")
+	time.Sleep(500 * time.Millisecond)
 
-	fmt.Println("Environment setup completed successfully.")
+	Logger.WithField("package", "environment").Infof("Environment setup completed successfully !")
+	fmt.Println(" ")
 }
 
 // create default config and write to ./config.yml

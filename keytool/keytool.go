@@ -63,8 +63,7 @@ func GenerateSSHKeypair(sshDir, keyName string) error {
 		return fmt.Errorf("failed to chmod private key: %v", err)
 	}
 
-	fmt.Printf("SSH key pair generated at: %s (public: %s)\n", privateKeyPath, publicKeyPath)
-	log.Printf("SSH key pair generated at: %s (public: %s)\n", privateKeyPath, publicKeyPath)
+	fmt.Printf("SSH key pair generated at: %s (public: %s)", privateKeyPath, publicKeyPath)
 	return nil
 }
 
@@ -72,8 +71,6 @@ func GenerateSSHKeypair(sshDir, keyName string) error {
 func CopyPublicKey(sshPrivKeypath, remoteUser, remoteHost string) error {
 	// define pubkey
 	sshPubKeyPath := sshPrivKeypath + ".pub"
-
-	//logStart("Copy SSH Key      |    cargoport %s    |    <target: %s>  \n", Version, remoteHost)
 
 	// utilize ssh-copy-id
 	cmd := exec.Command("ssh-copy-id", "-i", sshPubKeyPath, fmt.Sprintf("%s@%s", remoteUser, remoteHost))
