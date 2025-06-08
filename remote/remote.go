@@ -80,12 +80,12 @@ func sendToRemote(passedRemotePath, passedRemoteUser, passedRemoteHost, backupFi
 		// fallback to configuration-defined path
 		remoteFilePath = fmt.Sprintf("~/%s", backupFileNameBase)
 	}
-	logger.LogxWithFields("info", fmt.Sprintf("Transferring to remote %s@%s:%s", passedRemoteUser, passedRemoteHost, remoteFilePath), map[string]interface{}{
+	logger.LogxWithFields("debug", fmt.Sprintf("Transferring to remote %s@%s:%s", passedRemoteUser, passedRemoteHost, remoteFilePath), map[string]interface{}{
 		"package":         "remote",
 		"remote":          true,
 		"remote_host":     passedRemoteHost,
 		"remote_user":     passedRemoteUser,
-		"remove_filepath": remoteFilePath,
+		"remote_filepath": remoteFilePath,
 		"target":          backupFileNameBase,
 	})
 
@@ -107,12 +107,12 @@ func sendToRemote(passedRemotePath, passedRemoteUser, passedRemoteHost, backupFi
 		return fmt.Errorf("rsync failed: %v", err)
 	}
 
-	logger.LogxWithFields("info", fmt.Sprintf("Snapshot file successfully transferred to %s", passedRemoteHost), map[string]interface{}{
+	logger.LogxWithFields("info", "Snapshot successfully transferred to remote", map[string]interface{}{
 		"package":         "remote",
 		"remote":          true,
 		"remote_host":     passedRemoteHost,
 		"remote_user":     passedRemoteUser,
-		"remove_filepath": remoteFilePath,
+		"remote_filepath": remoteFilePath,
 		"success":         true,
 		"target":          backupFileNameBase,
 	})

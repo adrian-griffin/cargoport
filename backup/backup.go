@@ -24,7 +24,7 @@ func DetermineBackupTarget(targetDir, dockerName *string) (string, string, bool,
 		var err error
 		composeFilePath, err = docker.FindComposeFile(*dockerName, filepath.Base(*targetDir))
 		if err != nil {
-			logger.LogxWithFields("error", fmt.Sprintf("Compose file validation failure at %s", targetDir), map[string]interface{}{
+			logger.LogxWithFields("error", fmt.Sprintf("Compose file validation failure at %s", *targetDir), map[string]interface{}{
 				"package": "backup",
 				"target":  filepath.Base(*targetDir),
 				"success": false,
@@ -61,18 +61,18 @@ func DetermineBackupTarget(targetDir, dockerName *string) (string, string, bool,
 			"package": "backup",
 			"target":  filepath.Base(targetDirectory),
 		})
-		logger.LogxWithFields("debug", fmt.Sprintf("Treating as regular dir backup and skipping docker jobs"), map[string]interface{}{
+		logger.LogxWithFields("debug", "Treating as regular dir backup and skipping docker jobs", map[string]interface{}{
 			"package": "backup",
 			"target":  filepath.Base(targetDirectory),
 		})
 		return targetDirectory, "", false, nil
 	}
 
-	logger.LogxWithFields("error", fmt.Sprintf("Invalid -target-dir or -docker-name passed"), map[string]interface{}{
+	logger.LogxWithFields("error", "Invalid -target-dir or -docker-name passed", map[string]interface{}{
 		"package": "backup",
 		"target":  filepath.Base(filepath.Dir(composeFilePath)),
 	})
-	return "", "", dockerEnabled, fmt.Errorf("No valid target directory or Docker service specified")
+	return "", "", dockerEnabled, fmt.Errorf("no valid target directory or Docker service specified")
 }
 
 // determines path for new backupfile based on user input

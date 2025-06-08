@@ -208,9 +208,10 @@ func main() {
 		"version": Version,
 	})
 
-	logger.LogxWithFields("info", fmt.Sprintf("Beginning backup job via %s", targetPath), map[string]interface{}{
-		"package": "main",
-		"target":  filepath.Base(targetPath),
+	logger.LogxWithFields("debug", fmt.Sprintf("Beginning backup job via %s", targetPath), map[string]interface{}{
+		"package":    "main",
+		"target":     filepath.Base(targetPath),
+		"target_dir": targetPath,
 	})
 
 	// declare target base name for metrics and logging tracking
