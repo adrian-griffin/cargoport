@@ -3,6 +3,7 @@ package environment
 import (
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -34,6 +35,27 @@ const ConfigFilePointer = "/etc/cargoport.conf"
 
 // global logging
 var Logger *logrus.Logger
+
+// defines log & stdout styling and content at start of backups
+func LogStart(format string, args ...interface{}) {
+	log.Println("-------------------------------------------------------------------------")
+	log.Printf(format, args...)
+	log.Println("-------------------------------------------------------------------------")
+	fmt.Println("-------------------------------------------------------------------------")
+	fmt.Printf(format, args...)
+	fmt.Println("-------------------------------------------------------------------------")
+}
+
+// defines log & stdout styling and content at end of backups
+func LogEnd(format string, args ...interface{}) {
+
+	log.Println("-------------------------------------------------------------------------")
+	log.Printf(format, args...)
+	log.Println("-------------------------------------------------------------------------")
+	fmt.Println("-------------------------------------------------------------------------")
+	fmt.Printf(format, args...)
+	fmt.Println("-------------------------------------------------------------------------")
+}
 
 // determines true configfile path
 func GetConfigFilePath() (string, error) {
