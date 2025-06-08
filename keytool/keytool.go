@@ -10,16 +10,17 @@ import (
 	"time"
 
 	"github.com/adrian-griffin/cargoport/logger"
+	"github.com/sirupsen/logrus"
 )
 
 // create local cargoport keypair
 func GenerateSSHKeypair(sshDir, keyName string) error {
 	privateKeyPath := filepath.Join(sshDir, keyName)
-	publicKeyPath := privateKeyPath + ".pub"
+	// publicKeyPath := privateKeyPath + ".pub"
 
 	// if the private key already exists, do not overwrite
 	if _, err := os.Stat(privateKeyPath); err == nil {
-		logger.Logx.Infof("SSH Key '%s' already exists, skipping generation", privateKeyPath)
+		logger.Logx.WithField("action", "keytool").Infof("SSH Key '%s' already exists, skipping generation", privateKeyPath)
 		return nil
 	}
 
@@ -63,8 +64,7 @@ func GenerateSSHKeypair(sshDir, keyName string) error {
 		return fmt.Errorf("failed to chmod private key: %v", err)
 	}
 
-	logger.Logx.Infof("SSH key pair generated at: %s", privateKeyPath)
-	logger.Logx.Infof("                           %s", publicKeyPath)
+	logger.Logx.WithField("action", "keytool").Infof("SSH key pair generated at: %s(.pub)", privateKeyPath)
 	return nil
 }
 
@@ -83,7 +83,13 @@ func CopyPublicKey(sshPrivKeypath, remoteUser, remoteHost string) error {
 		return fmt.Errorf("failed to copy SSH public key to remote: %v", err)
 	}
 
-	logger.Logx.Infof("Successfully installed local public key into %s@%s:~/.ssh/authorized_keys", remoteUser, remoteHost)
+	logger.LogxWithFields("info", fmt.Sprintf("Successfully installed local public key into %s@%s:~/.ssh/authorized_keys", remoteUser, remoteHost), logrus.Fields{
+		"action":      "keytool",
+		"remote":      true,
+		"success":     true,
+		"remote_host": remoteHost,
+		"remote_user": remoteUser,
+	})
 	return nil
 }
 

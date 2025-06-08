@@ -279,7 +279,7 @@ ssh_private_key_name: cargoport-id-ed25519
 
 # [ LOGGING ]
 # debug, info, warn, error, fatal
-log_level: info 
+log_level: info
 `, rootDir, rootDir, rootDir)
 
 	// Write default config file

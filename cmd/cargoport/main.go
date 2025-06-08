@@ -21,7 +21,7 @@ import (
 	"github.com/adrian-griffin/cargoport/sysutil"
 )
 
-const Version = "v0.92.5"
+const Version = "v0.92.6"
 const motd = "kind words cost nothing <3"
 
 func main() {

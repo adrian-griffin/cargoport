@@ -31,8 +31,11 @@ func logLevelStringSwitch(logLevelString string) logrus.Level {
 	}
 }
 
-func LogXWithFields(log *logrus.Logger, level logrus.Level, msg string, fields logrus.Fields) {
-	entry := log.WithFields(fields)
+func LogxWithFields(levelString string, msg string, fields logrus.Fields) {
+	entry := Logx.WithFields(fields)
+
+	level := logLevelStringSwitch(levelString)
+
 	switch level {
 	case logrus.DebugLevel:
 		entry.Debug(msg)
