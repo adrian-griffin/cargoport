@@ -48,7 +48,7 @@ func main() {
 	copySSHKeyBool := flag.Bool("copy-key", false, "Copy cargoport SSH key to remote host")
 
 	// snapshot versioning and tagging flags
-	tagOutputString := flag.String("-tag", "", "Append identifying tag to output file name (e.g: service1-<tag>.bak.tar.gz)")
+	tagOutputString := flag.String("tag", "", "Append identifying tag to output file name (e.g: service1-<tag>.bak.tar.gz)")
 
 	// custom help messaging
 	flag.Usage = func() {
