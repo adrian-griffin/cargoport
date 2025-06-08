@@ -3,6 +3,7 @@ package logger
 import (
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
 	"time"
@@ -52,7 +53,7 @@ func LogxWithFields(levelString string, msg string, fields map[string]interface{
 	}
 }
 
-func InitLogging(cargoportBase string, defaultLogLevelString string) (logFilePath string) {
+func InitLogging(cargoportBase, defaultLogLevelString, logFormat string) (logFilePath string) {
 
 	logFilePath = filepath.Join(cargoportBase, "cargoport-main.log")
 	logFile, err := os.OpenFile(logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
@@ -69,13 +70,21 @@ func InitLogging(cargoportBase string, defaultLogLevelString string) (logFilePat
 
 	Logx.SetOutput((multiWriter))
 
-	Logx.SetFormatter(&logrus.TextFormatter{
-		//Logx.SetFormatter(&logrus.JSONFormatter{
-		FullTimestamp:   true,
-		PadLevelText:    true,
-		TimestampFormat: time.RFC3339,
-		ForceColors:     true,
-	})
+	if logFormat == "json" {
+		Logx.SetFormatter(&logrus.JSONFormatter{
+			TimestampFormat: time.RFC3339,
+		})
+	} else if logFormat == "text" {
+		Logx.SetFormatter(&logrus.TextFormatter{
+			//Logx.SetFormatter(&logrus.JSONFormatter{
+			FullTimestamp:   true,
+			PadLevelText:    true,
+			TimestampFormat: time.RFC3339,
+			ForceColors:     true,
+		})
+	} else {
+		log.Fatalf("Invalid log format! Unable to initialize logging service.")
+	}
 
 	Logx.SetLevel(logLevelStringSwitch(defaultLogLevelString))
 

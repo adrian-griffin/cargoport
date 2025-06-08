@@ -28,6 +28,7 @@ type ConfigFile struct {
 	ICMPTest            bool   `yaml:"icmp_test"`
 	SSHTest             bool   `yaml:"ssh_test"`
 	LogLevel            string `yaml:"log_level"`
+	LogFormat           string `yaml:"log_type"`
 }
 
 // system-wide config reference path
@@ -129,7 +130,7 @@ func InitEnvironment(configFile ConfigFile) (string, string, string, string, str
 	}
 
 	// initialize logging
-	logFilePath := logger.InitLogging(cargoportBase, configFile.LogLevel)
+	logFilePath := logger.InitLogging(cargoportBase, configFile.LogLevel, configFile.LogFormat)
 
 	return cargoportBase, cargoportLocal, cargoportRemote, logFilePath, cargoportKeys
 }
@@ -281,8 +282,12 @@ ssh_key_directory: %s/keys
 ssh_private_key_name: cargoport-id-ed25519
 
 # [ LOGGING ]
-# debug, info, warn, error, fatal
-log_level: info
+# I'd recommend debug or info for most cases
+log_level: info       # 'debug', 'info', 'warn', 'error', 'fatal'
+
+# defines .log output type depending on your taste
+# json works well if you use jq with it
+log_type: json        # 'json' or 'text'
 `, rootDir, rootDir, rootDir)
 
 	// Write default config file
