@@ -109,9 +109,7 @@ func LoadConfigFile(configFilePath string) (*ConfigFile, error) {
 
 	// walk map, if no keys match valid log levels then warn & set config.LogLevel to `info`
 	if !validLogLevels[config.LogLevel] {
-		logger.LogxWithFields("warn", "invalid `log_level` supplied, defaulting to `info`", map[string]interface{}{
-			"package": "environment",
-		})
+		log.Printf("invalid `log_level` supplied, defaulting to `info`")
 		config.LogLevel = "info"
 	}
 
@@ -123,9 +121,8 @@ func LoadConfigFile(configFilePath string) (*ConfigFile, error) {
 	}
 	// walk map, if no keys match valid log formats then warn & set config.LogFormat to `text`
 	if !validLogFormats[config.LogFormat] {
-		logger.LogxWithFields("warn", "invalid `log_format` supplied, defaulting to `text`", map[string]interface{}{
-			"package": "environment",
-		})
+		log.Printf("invalid `log_format` supplied, defaulting to `text`")
+		config.LogFormat = "text"
 	}
 
 	return &config, nil
