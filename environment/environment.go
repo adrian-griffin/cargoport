@@ -27,6 +27,7 @@ type ConfigFile struct {
 	SSHKeyName          string `yaml:"ssh_private_key_name"`
 	ICMPTest            bool   `yaml:"icmp_test"`
 	SSHTest             bool   `yaml:"ssh_test"`
+	LogLevel            string `yaml:"log_level"`
 }
 
 // system-wide config reference path
@@ -128,7 +129,7 @@ func InitEnvironment(configFile ConfigFile) (string, string, string, string, str
 	}
 
 	// initialize logging
-	logFilePath := logger.InitLogging(cargoportBase)
+	logFilePath := logger.InitLogging(cargoportBase, configFile.LogLevel)
 
 	return cargoportBase, cargoportLocal, cargoportRemote, logFilePath, cargoportKeys
 }
@@ -275,6 +276,10 @@ ssh_test: false
 # [ KEYTOOL DEFAULTS ]
 ssh_key_directory: %s/keys
 ssh_private_key_name: cargoport-id-ed25519
+
+# [ LOGGING ]
+# debug, info, warn, error, fatal
+log_level: info 
 `, rootDir, rootDir, rootDir)
 
 	// Write default config file

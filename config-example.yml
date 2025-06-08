@@ -23,3 +23,7 @@ ssh_test: false
 # [ KEYTOOL DEFAULTS ]
 ssh_key_directory: /var/cargoport/keys
 ssh_private_key_name: cargoport-id-ed25519
+
+# [ LOGGING ]
+# debug, info, warn, error, fatal
+log_level: info 

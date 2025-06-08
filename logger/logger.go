@@ -13,25 +13,43 @@ import (
 // global logging
 var Logx *logrus.Logger
 
-func LogXWithFields(log *logrus.Logger, level string, msg string, fields logrus.Fields) {
+// typecasts logrus levels based on basic string ID
+func logLevelStringSwitch(logLevelString string) logrus.Level {
+	switch logLevelString {
+	case "debug":
+		return logrus.DebugLevel
+	case "info":
+		return logrus.InfoLevel
+	case "warn":
+		return logrus.WarnLevel
+	case "error":
+		return logrus.ErrorLevel
+	case "fatal":
+		return logrus.FatalLevel
+	default:
+		return logrus.InfoLevel
+	}
+}
+
+func LogXWithFields(log *logrus.Logger, level logrus.Level, msg string, fields logrus.Fields) {
 	entry := log.WithFields(fields)
 	switch level {
-	case "debug":
+	case logrus.DebugLevel:
 		entry.Debug(msg)
-	case "info":
+	case logrus.InfoLevel:
 		entry.Info(msg)
-	case "warn":
+	case logrus.WarnLevel:
 		entry.Warn(msg)
-	case "error":
+	case logrus.ErrorLevel:
 		entry.Error(msg)
-	case "fatal":
+	case logrus.FatalLevel:
 		entry.Fatal(msg)
 	default:
 		entry.Info(msg)
 	}
 }
 
-func InitLogging(cargoportBase string) (logFilePath string) {
+func InitLogging(cargoportBase string, defaultLogLevelString string) (logFilePath string) {
 
 	logFilePath = filepath.Join(cargoportBase, "cargoport-main.log")
 	logFile, err := os.OpenFile(logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
@@ -52,9 +70,10 @@ func InitLogging(cargoportBase string) (logFilePath string) {
 		FullTimestamp:   true,
 		PadLevelText:    true,
 		TimestampFormat: time.RFC3339,
+		// ForceColors:      true,
 	})
 
-	Logx.SetLevel(logrus.InfoLevel)
+	Logx.SetLevel(logLevelStringSwitch(defaultLogLevelString))
 
 	return logFilePath
 }
