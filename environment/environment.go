@@ -123,25 +123,20 @@ func InitEnvironment(configFile ConfigFile) (string, string, string, string, str
 		log.Fatalf("ERROR <environment>: Error creating directory %s: %v", cargoportLocal, err)
 	}
 
-	fmt.Printf("Root directory initialized at: %s\n", cargoportBase)
-
 	// create /$CARGOPORT/local
 	if err = os.MkdirAll(cargoportLocal, 0755); err != nil {
 		log.Fatalf("ERROR <environment>: Error creating directory %s: %v", cargoportLocal, err)
 	}
-	fmt.Printf("Local backup directory: %s\n", cargoportLocal)
 
 	// create /$CARGOPORT/remote
 	if err = os.MkdirAll(cargoportRemote, 0755); err != nil {
 		log.Fatalf("ERROR <environment>: Error creating directory %s: %v", cargoportRemote, err)
 	}
-	fmt.Printf("Remote backup directory: %s\n", cargoportRemote)
 
 	// create /$CARGOPORT/keys cargoportKeys
 	if err = os.MkdirAll(cargoportKeys, 0755); err != nil {
 		log.Fatalf("ERROR <environment>: Error creating directory %s: %v", cargoportKeys, err)
 	}
-	fmt.Printf("Keytool storage: %s\n", cargoportKeys)
 
 	// set 777 on /var/cargoport/remote for all users to access
 	err = sysutil.RunCommand("chmod", "-R", "777", cargoportRemote)
@@ -151,7 +146,6 @@ func InitEnvironment(configFile ConfigFile) (string, string, string, string, str
 
 	// initialize logging
 	logFilePath := initLogging(cargoportBase)
-	fmt.Printf("Log file initialized at: %s\n", logFilePath)
 
 	return cargoportBase, cargoportLocal, cargoportRemote, logFilePath, cargoportKeys
 }
@@ -213,7 +207,13 @@ func SetupTool() {
 	}
 
 	// init env and determine directories & logfile
-	cargoportBase, _, _, _, cargoportKeys := InitEnvironment(configFile)
+	cargoportBase, cargoportLocal, cargoportRemote, logFilePath, cargoportKeys := InitEnvironment(configFile)
+
+	fmt.Printf("Root directory initialized at: %s\n", cargoportBase)
+	fmt.Printf("Local backup directory: %s\n", cargoportLocal)
+	fmt.Printf("Remote backup directory: %s\n", cargoportRemote)
+	fmt.Printf("Keytool storage: %s\n", cargoportKeys)
+	fmt.Printf("Log file initialized at: %s\n", logFilePath)
 
 	fmt.Println("------")
 	fmt.Println(" ")
