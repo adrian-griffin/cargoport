@@ -69,12 +69,15 @@ func LoadConfigFile(configFilePath string) (*ConfigFile, error) {
 		return nil, fmt.Errorf("missing required config: default_cargoport_directory")
 	}
 	if err := sysutil.ValidateDirectoryString(config.DefaultCargoportDir); err != nil {
-		return nil, fmt.Errorf("invalid path defined: default_cargoport_directory")
+		return nil, fmt.Errorf("invalid required config: default_cargoport_directory: %v", err)
 	}
 
-	// validate that SSH keydir is not empty & valid
+	// validate that SSH keydir is not empty, is valid, and writeable
 	if config.SSHKeyDir == "" {
 		return nil, fmt.Errorf("missing required config: ssh_key_directory")
+	}
+	if err := sysutil.ValidateDirectoryWriteable(config.SSHKeyDir); err != nil {
+		return nil, fmt.Errorf("invalid required config: ssh_key_directory: %v", err)
 	}
 
 	// validate that SSH key name is not empty
@@ -85,8 +88,44 @@ func LoadConfigFile(configFilePath string) (*ConfigFile, error) {
 	// if remote host not empy, validate that remote host is a valid IP address or DNS name
 	if config.RemoteHost != "" {
 		if err := nethandler.ValidateIP(config.RemoteHost); err != nil {
-			return nil, fmt.Errorf("invalid required config: default_remote_host")
+			return nil, fmt.Errorf("invalid required config: default_remote_host: %v", err)
 		}
+	}
+
+	// error if empty default_remote_user
+	if config.RemoteUser == "" {
+		fmt.Errorf("invalid `default_remote_user` in configfile")
+	}
+
+	// validate log_level
+	// warn if invalid, default to "info"
+	validLogLevels := map[string]bool{
+		"debug": true,
+		"info":  true,
+		"warn":  true,
+		"error": true,
+		"fatal": true,
+	}
+
+	// walk map, if no keys match valid log levels then warn & set config.LogLevel to `info`
+	if !validLogLevels[config.LogLevel] {
+		logger.LogxWithFields("warn", "invalid `log_level` supplied, defaulting to `info`", map[string]interface{}{
+			"package": "environment",
+		})
+		config.LogLevel = "info"
+	}
+
+	// validate log_type
+	// warn if invalid, default to "text"
+	validLogFormats := map[string]bool{
+		"text": true,
+		"json": true,
+	}
+	// walk map, if no keys match valid log formats then warn & set config.LogFormat to `text`
+	if !validLogFormats[config.LogFormat] {
+		logger.LogxWithFields("warn", "invalid `log_format` supplied, defaulting to `text`", map[string]interface{}{
+			"package": "environment",
+		})
 	}
 
 	return &config, nil
