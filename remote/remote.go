@@ -82,7 +82,7 @@ func sendToRemote(passedRemotePath, passedRemoteUser, passedRemoteHost, backupFi
 	rsyncArgs := []string{
 		"-avz",
 		"--checksum",
-		"-e", fmt.Sprintf("ssh -i %s", cargoportKey),
+		"-e", fmt.Sprintf("ssh -i %s -o ConnectTimeout=10 -o ServerAliveInterval=5 -o ServerAliveCountMax=2", cargoportKey),
 		targetFileToTransfer,
 		fmt.Sprintf("%s@%s:%s", passedRemoteUser, passedRemoteHost, remoteFilePath),
 	}
