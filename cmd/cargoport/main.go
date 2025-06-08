@@ -292,5 +292,5 @@ func main() {
 		"duration": fmt.Sprintf("%.2fs", executionSeconds),
 		"success":  true,
 	})
-	logger.Logx.WithField("package", "spacer").Infof(" ")
+	logger.Logx.WithField("package", "spacer").Infof(" --------------------------------------------------- ")
 }
