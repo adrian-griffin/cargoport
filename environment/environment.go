@@ -2,16 +2,19 @@ package environment
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"gopkg.in/yaml.v3"
 
 	"github.com/adrian-griffin/cargoport/keytool"
 	"github.com/adrian-griffin/cargoport/nethandler"
 	"github.com/adrian-griffin/cargoport/sysutil"
+	"github.com/sirupsen/logrus"
 )
 
 type ConfigFile struct {
@@ -29,6 +32,9 @@ type ConfigFile struct {
 
 // system-wide config reference path
 const ConfigFilePointer = "/etc/cargoport.conf"
+
+// global logging
+var Logger *logrus.Logger
 
 // defines log & stdout styling and content at start of backups
 func LogStart(format string, args ...interface{}) {
@@ -154,14 +160,30 @@ func InitEnvironment(configFile ConfigFile) (string, string, string, string, str
 
 // inits logging services
 func initLogging(cargoportBase string) (logFilePath string) {
+
 	logFilePath = filepath.Join(cargoportBase, "cargoport-main.log")
 	logFile, err := os.OpenFile(logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		fmt.Printf("ERROR: Failed to initialize logging: %v", err)
 		os.Exit(1)
 	}
-	log.SetOutput(logFile)
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
+
+	// init logrus
+	Logger = logrus.New()
+
+	// multi-writer to output to .log and stdout
+	multiWriter := io.MultiWriter(logFile, os.Stdout)
+
+	Logger.SetOutput((multiWriter))
+
+	Logger.SetFormatter(&logrus.TextFormatter{
+		FullTimestamp:   true,
+		PadLevelText:    true,
+		TimestampFormat: time.RFC3339,
+	})
+
+	Logger.SetLevel(logrus.InfoLevel)
+
 	return logFilePath
 }
 

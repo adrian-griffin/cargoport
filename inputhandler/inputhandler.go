@@ -105,8 +105,7 @@ func InterpretFlags(
 
 			// if either remote user or remote host are empty
 			if configFile.RemoteUser == "" || configFile.RemoteHost == "" {
-				fmt.Printf("ERROR <config>: Default remote host and username must be set in the configuration file to use -remote-send-defaults.")
-				log.Fatalf("ERROR <config>: Default remote host and username must be set in the configuration file to use -remote-send-defaults.")
+				environment.Logger.WithField("package", "config").Fatal("Default remote host and username must be set in config.yml in order to use -remote-send-defaults")
 			}
 		}
 	} else {
