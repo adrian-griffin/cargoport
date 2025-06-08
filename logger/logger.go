@@ -3,7 +3,6 @@ package logger
 import (
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"time"
@@ -74,7 +73,7 @@ func InitLogging(cargoportBase, defaultLogLevelString, logFormat string) (logFil
 		Logx.SetFormatter(&logrus.JSONFormatter{
 			TimestampFormat: time.RFC3339,
 		})
-	} else if logFormat == "text" {
+	} else {
 		Logx.SetFormatter(&logrus.TextFormatter{
 			//Logx.SetFormatter(&logrus.JSONFormatter{
 			FullTimestamp:   true,
@@ -82,8 +81,6 @@ func InitLogging(cargoportBase, defaultLogLevelString, logFormat string) (logFil
 			TimestampFormat: time.RFC3339,
 			ForceColors:     true,
 		})
-	} else {
-		log.Fatalf("Invalid log format! Unable to initialize logging service.")
 	}
 
 	Logx.SetLevel(logLevelStringSwitch(defaultLogLevelString))
