@@ -1,11 +1,12 @@
 package main
 
-// Cargoport v0.91.2
+// Cargoport v0.91.3
 
 import (
 	"flag"
 	"fmt"
-	"log"
+
+	// "log"
 	"os"
 	"path/filepath"
 	"time"
@@ -19,7 +20,7 @@ import (
 	"github.com/adrian-griffin/cargoport/sysutil"
 )
 
-const Version = "v0.91.2"
+const Version = "v0.91.3"
 const motd = "kind words cost nothing <3"
 
 func main() {
@@ -121,12 +122,12 @@ func main() {
 	// determine configfile location
 	configFilePath, err := environment.GetConfigFilePath()
 	if err != nil {
-		log.Fatalf("ERROR <config>: %v\nUnable to read config, please try cargoport -setup first!", err)
+		environment.Logger.Fatal("Failed to read config.yml, please try cargoport -setup first!")
 	}
 	// parse config file to set defaults
 	configFile, err := environment.LoadConfigFile(configFilePath)
 	if err != nil {
-		log.Fatalf("ERROR <config>: %v", err)
+		environment.Logger.Fatalf("Error parsing config: %v", err)
 	}
 
 	// init environment
@@ -136,7 +137,7 @@ func main() {
 		sshKeyDir := configFile.SSHKeyDir
 		sshKeyName := configFile.SSHKeyName
 		if err := keytool.GenerateSSHKeypair(sshKeyDir, sshKeyName); err != nil {
-			log.Fatalf("ERROR: Failed to generate SSH key: %v", err)
+			environment.Logger.Fatalf("Failed to generate SSH key: %v", err)
 		}
 		os.Exit(0)
 	}
@@ -144,19 +145,19 @@ func main() {
 	// validate permissions & integrity on private key
 	sshPrivateKeyPath := filepath.Join(configFile.SSHKeyDir, configFile.SSHKeyName)
 	if err := keytool.ValidateSSHPrivateKeyPerms(sshPrivateKeyPath); err != nil {
-		fmt.Printf("ERROR <keytool>: Unable to validate SSH private key, please check configfile or create a new pair")
-		log.Fatalf("ERROR <keytool>: %v", err)
+		environment.Logger.Fatal("Unable to validate keypair, please check configfile or create a new pair")
+		environment.Logger.Fatalf("Key validation error: %v", err)
 	}
 
 	// if both remote user and remote host are specified during copy command, then proceed
 	if *copySSHKeyBool {
 		if *remoteHost == "" || *remoteUser == "" {
-			log.Fatal("Remote user and host must be specified in the config file to copy SSH key")
+			environment.Logger.Fatal("Both remote host and user must be specified to copy SSH key")
 		}
 		//
 		sshPrivKeypath := filepath.Join(configFile.SSHKeyDir, configFile.SSHKeyName)
 		if err := keytool.CopyPublicKey(sshPrivKeypath, *remoteUser, *remoteHost); err != nil {
-			log.Fatalf("ERROR: Failed to copy SSH public key: %v", err)
+			environment.Logger.Fatalf("Failed to copy SSH public key: %v", err)
 		}
 		os.Exit(0)
 	}
@@ -172,19 +173,20 @@ func main() {
 	// prepare local backupfile & compose
 	backupFilePath, err := backup.PrepareBackupFilePath(cargoportLocal, targetPath, *localOutputDir, *tagOutputString, *skipLocal)
 	if err != nil {
-		log.Fatalf("ERROR <storage>: Unable to prepare local backupfile output location: %v", err)
+		environment.Logger.Fatalf("Unable to prepare output location: %v", err)
 	}
 
 	// begin backup job timer
 	timeBeginJob := time.Now()
 
 	// log & print job start
-	environment.LogStart("New Backup Job    |    cargoport %s    |    <%s>\n", Version, filepath.Base(targetPath))
+	environment.Logger.WithField("version", Version).Info("New backup job added")
+	environment.Logger.WithField("target", filepath.Base(targetPath)).Info("Beginning backup job via %s", targetPath)
 
 	// handle pre-backup docker tasks
 	if dockerEnabled {
 		if err := docker.HandleDockerPreBackup(composeFilePath); err != nil {
-			log.Fatalf("ERROR <docker>: Pre-compression Docker tasks failed: %v", err)
+			environment.Logger.Fatalf("Pre-snapshot docker tasks failed: %v", err)
 		}
 	}
 
@@ -194,11 +196,11 @@ func main() {
 		// if docker restart fails, log error
 		if dockerEnabled {
 			if dockererr := docker.HandleDockerPostBackup(composeFilePath, *restartDockerBool); dockererr != nil {
-				log.Printf("ERROR <docker>: %v", dockererr)
+				environment.Logger.Printf("Failure to handle docker compose after backup: %v", dockererr)
 			}
 		}
 
-		log.Fatalf("ERROR <compression>: %v", err)
+		environment.Logger.Fatalf("Failure to compress target: %v", err)
 	}
 
 	// handle remote transfer
@@ -208,17 +210,17 @@ func main() {
 			// if remote fail, then remove tempfile when skipLocal enabled
 			if *skipLocal {
 				sysutil.RemoveTempFile(backupFilePath)
-				log.Fatalf("ERROR <remote>: %v", err)
+				environment.Logger.Fatal("Removing local tempfile")
 
 			}
 
 			// if remote fail, then handle post-backup docker jobs
 			if dockerEnabled {
 				if err := docker.HandleDockerPostBackup(composeFilePath, *restartDockerBool); err != nil {
-					log.Fatalf("ERROR <docker>: %v", err)
+					environment.Logger.Fatalf("Failure to reinitialize docker service after failed transfer: %v", err)
 				}
 			}
-			log.Fatalf("ERROR <remote>: %v", err)
+			environment.Logger.Fatalf("Failure to complete remote transfer: %v", err)
 		}
 	}
 
@@ -228,13 +230,13 @@ func main() {
 	// handle docker post backup
 	if dockerEnabled {
 		if err := docker.HandleDockerPostBackup(composeFilePath, *restartDockerBool); err != nil {
-			log.Fatalf("ERROR <docker>: %v", err)
+			environment.Logger.Fatalf("Failure to restart docker: %v", err)
 		}
 	}
 
 	// job completion banner & time calculation
 	jobDuration := time.Since(timeBeginJob)
 	executionSeconds := jobDuration.Seconds()
-	//                   |        time  5.37s       |
-	environment.LogEnd("Job Success       |        time  %.2fs       |    <%s>\n", executionSeconds, filepath.Base(targetPath))
+
+	environment.Logger.WithField("target", filepath.Base(targetPath)).Infof("Job success, execution duration: %.2fs", executionSeconds)
 }

@@ -128,28 +128,28 @@ func InitEnvironment(configFile ConfigFile) (string, string, string, string, str
 
 	// create /$CARGOPORT/
 	if err = os.MkdirAll(cargoportBase, 0755); err != nil {
-		log.Fatalf("ERROR <environment>: Error creating directory %s: %v", cargoportLocal, err)
+		log.Fatalf("ERR: Error creating directory %s: %v", cargoportLocal, err)
 	}
 
 	// create /$CARGOPORT/local
 	if err = os.MkdirAll(cargoportLocal, 0755); err != nil {
-		log.Fatalf("ERROR <environment>: Error creating directory %s: %v", cargoportLocal, err)
+		log.Fatalf("ERR: Error creating directory %s: %v", cargoportLocal, err)
 	}
 
 	// create /$CARGOPORT/remote
 	if err = os.MkdirAll(cargoportRemote, 0755); err != nil {
-		log.Fatalf("ERROR <environment>: Error creating directory %s: %v", cargoportRemote, err)
+		log.Fatalf("ERR: Error creating directory %s: %v", cargoportRemote, err)
 	}
 
 	// create /$CARGOPORT/keys cargoportKeys
 	if err = os.MkdirAll(cargoportKeys, 0755); err != nil {
-		log.Fatalf("ERROR <environment>: Error creating directory %s: %v", cargoportKeys, err)
+		log.Fatalf("ERR: Error creating directory %s: %v", cargoportKeys, err)
 	}
 
 	// set 777 on /var/cargoport/remote for all users to access
 	err = sysutil.RunCommand("chmod", "-R", "777", cargoportRemote)
 	if err != nil {
-		log.Fatalf("ERROR <environtment>: Error setting %s permissions for remotewrite: %v", cargoportRemote, err)
+		log.Fatalf("ERR: Error setting %s permissions for remotewrite: %v", cargoportRemote, err)
 	}
 
 	// initialize logging
@@ -297,7 +297,7 @@ func SetupTool() {
 	fmt.Println(" ")
 	time.Sleep(500 * time.Millisecond)
 
-	Logger.WithField("package", "environment").Infof("Environment setup completed successfully !")
+	Logger.WithField("package", "environment").Infof("Environment setup completed successfully!")
 	fmt.Println(" ")
 }
 
