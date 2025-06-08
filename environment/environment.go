@@ -305,7 +305,7 @@ default_remote_host: 10.0.0.1
 # If cargoport is also set up on the remote target machine(s), you may want use this!
 #   Otherwise use the default ~/ output
 default_remote_output_dir: %s/remote
-# default_remote_output_dir: ~/
+#default_remote_output_dir: ~/
 
 # [ NETWORK SETTINGS ]
 # These tests run before every remote transfer
