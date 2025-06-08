@@ -2,7 +2,6 @@ package environment
 
 import (
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -12,9 +11,9 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/adrian-griffin/cargoport/keytool"
+	"github.com/adrian-griffin/cargoport/logger"
 	"github.com/adrian-griffin/cargoport/nethandler"
 	"github.com/adrian-griffin/cargoport/sysutil"
-	"github.com/sirupsen/logrus"
 )
 
 type ConfigFile struct {
@@ -32,9 +31,6 @@ type ConfigFile struct {
 
 // system-wide config reference path
 const ConfigFilePointer = "/etc/cargoport.conf"
-
-// global logging
-var Logger *logrus.Logger
 
 // defines log & stdout styling and content at start of backups
 func LogStart(format string, args ...interface{}) {
@@ -153,38 +149,9 @@ func InitEnvironment(configFile ConfigFile) (string, string, string, string, str
 	}
 
 	// initialize logging
-	logFilePath := initLogging(cargoportBase)
+	logFilePath := logger.InitLogging(cargoportBase)
 
 	return cargoportBase, cargoportLocal, cargoportRemote, logFilePath, cargoportKeys
-}
-
-// inits logging services
-func initLogging(cargoportBase string) (logFilePath string) {
-
-	logFilePath = filepath.Join(cargoportBase, "cargoport-main.log")
-	logFile, err := os.OpenFile(logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		fmt.Printf("ERROR: Failed to initialize logging: %v", err)
-		os.Exit(1)
-	}
-
-	// init logrus
-	Logger = logrus.New()
-
-	// multi-writer to output to .log and stdout
-	multiWriter := io.MultiWriter(logFile, os.Stdout)
-
-	Logger.SetOutput((multiWriter))
-
-	Logger.SetFormatter(&logrus.TextFormatter{
-		FullTimestamp:   true,
-		PadLevelText:    true,
-		TimestampFormat: time.RFC3339,
-	})
-
-	Logger.SetLevel(logrus.InfoLevel)
-
-	return logFilePath
 }
 
 // guided setup tool for initial init
@@ -297,7 +264,7 @@ func SetupTool() {
 	fmt.Println(" ")
 	time.Sleep(500 * time.Millisecond)
 
-	Logger.WithField("package", "environment").Infof("Environment setup completed successfully!")
+	logger.Logx.WithField("package", "environment").Infof("Environment setup completed successfully!")
 	fmt.Println(" ")
 }
 

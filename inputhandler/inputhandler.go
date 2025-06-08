@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/adrian-griffin/cargoport/environment"
+	"github.com/adrian-griffin/cargoport/logger"
 	"github.com/adrian-griffin/cargoport/nethandler"
 )
 
@@ -105,7 +106,7 @@ func InterpretFlags(
 
 			// if either remote user or remote host are empty
 			if configFile.RemoteUser == "" || configFile.RemoteHost == "" {
-				environment.Logger.WithField("package", "config").Fatal("Default remote host and username must be set in config.yml in order to use -remote-send-defaults")
+				logger.Logx.WithField("package", "config").Fatal("Default remote host and username must be set in config.yml in order to use -remote-send-defaults")
 			}
 		}
 	} else {
