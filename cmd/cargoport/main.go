@@ -189,7 +189,11 @@ func main() {
 	// prepare local backupfile & compose
 	backupFilePath, err := backup.PrepareBackupFilePath(cargoportLocal, targetPath, *localOutputDir, *tagOutputString, *skipLocal)
 	if err != nil {
-		logger.Logx.Fatalf("Unable to prepare output location: %v", err)
+		logger.LogxWithFields("error", fmt.Sprintf("Failure to determine output path: %v", err), map[string]interface{}{
+			"package":  "main",
+			"target":   filepath.Base(targetPath),
+			"root_dir": cargoportLocal,
+		})
 	}
 
 	// begin backup job timer
@@ -205,7 +209,12 @@ func main() {
 	// handle pre-backup docker tasks
 	if dockerEnabled {
 		if err := docker.HandleDockerPreBackup(composeFilePath, targetBaseName); err != nil {
-			logger.Logx.Fatalf("Pre-snapshot docker tasks failed: %v", err)
+			logger.LogxWithFields("fatal", fmt.Sprintf("Failure to perform pre-snapshot docker tasks: %v", err), map[string]interface{}{
+				"package":    "main",
+				"target":     targetBaseName,
+				"output_dir": filepath.Dir(backupFilePath),
+				"target_dir": filepath.Dir(composeFilePath),
+			})
 		}
 	}
 
@@ -215,11 +224,20 @@ func main() {
 		// if docker restart fails, log error
 		if dockerEnabled {
 			if dockererr := docker.HandleDockerPostBackup(composeFilePath, *restartDockerBool); dockererr != nil {
-				logger.Logx.Printf("Failure to handle docker compose after backup: %v", dockererr)
+				logger.LogxWithFields("error", fmt.Sprintf("Failure to handle docker compose after backup: %v", dockererr), map[string]interface{}{
+					"package":    "main",
+					"target":     filepath.Base(targetPath),
+					"output_dir": filepath.Dir(backupFilePath),
+					"target_dir": filepath.Dir(composeFilePath),
+				})
 			}
 		}
 
-		logger.Logx.Fatalf("Failure to compress target: %v", err)
+		logger.LogxWithFields("fatal", fmt.Sprintf("Failure to compress target: %v", err), map[string]interface{}{
+			"package":    "main",
+			"target":     filepath.Base(targetPath),
+			"output_dir": filepath.Dir(backupFilePath),
+		})
 	}
 
 	// handle remote transfer
@@ -229,7 +247,10 @@ func main() {
 			// if remote fail, then remove tempfile when skipLocal enabled
 			if *skipLocal {
 				sysutil.RemoveTempFile(backupFilePath)
-				logger.Logx.Fatal("Removing local tempfile")
+				logger.LogxWithFields("debug", fmt.Sprintf("Removing local tempfile"), map[string]interface{}{
+					"package": "main",
+					"target":  filepath.Base(filepath.Dir(backupFilePath)),
+				})
 
 			}
 
@@ -239,7 +260,12 @@ func main() {
 					logger.Logx.Fatalf("Failure to reinitialize docker service after failed transfer: %v", err)
 				}
 			}
-			logger.Logx.Fatalf("Failure to complete remote transfer: %v", err)
+			logger.LogxWithFields("error", fmt.Sprintf("Failure to complete remote transfer: %v", err), map[string]interface{}{
+				"package":     "main",
+				"target":      filepath.Base(filepath.Dir(backupFilePath)),
+				"remote_host": remoteHost,
+				"remote_user": remoteUser,
+			})
 		}
 	}
 
@@ -249,7 +275,10 @@ func main() {
 	// handle docker post backup
 	if dockerEnabled {
 		if err := docker.HandleDockerPostBackup(composeFilePath, *restartDockerBool); err != nil {
-			logger.Logx.Fatalf("Failure to restart docker: %v", err)
+			logger.LogxWithFields("error", fmt.Sprintf("Failure to restart docker service: %v", err), map[string]interface{}{
+				"package": "main",
+				"target":  filepath.Base(targetPath),
+			})
 		}
 	}
 
@@ -257,5 +286,11 @@ func main() {
 	jobDuration := time.Since(timeBeginJob)
 	executionSeconds := jobDuration.Seconds()
 
-	logger.Logx.WithField("target", filepath.Base(targetPath)).Infof("Job success, execution duration: %.2fs", executionSeconds)
+	logger.LogxWithFields("info", fmt.Sprintf("Job success, execution duration: %.2fs", executionSeconds), map[string]interface{}{
+		"package":  "main",
+		"target":   filepath.Base(targetPath),
+		"duration": fmt.Sprintf("%.2fs", executionSeconds),
+		"success":  true,
+	})
+	logger.Logx.WithField("package", "spacer").Infof(" ")
 }
