@@ -15,13 +15,14 @@ import (
 	"github.com/adrian-griffin/cargoport/docker"
 	"github.com/adrian-griffin/cargoport/environment"
 	"github.com/adrian-griffin/cargoport/inputhandler"
+	"github.com/adrian-griffin/cargoport/jobcontext"
 	"github.com/adrian-griffin/cargoport/keytool"
 	"github.com/adrian-griffin/cargoport/logger"
 	"github.com/adrian-griffin/cargoport/remote"
 	"github.com/adrian-griffin/cargoport/sysutil"
 )
 
-const Version = "v0.92.24"
+const Version = "v0.92.44"
 const motd = "kind words cost nothing <3"
 
 func main() {
@@ -173,6 +174,9 @@ func main() {
 		})
 	}
 
+	// log & print job start
+	logger.Logx.WithField("package", "spacer").Infof(" --------------------------------------------------- ")
+
 	//<section>   Begin Backups
 	//------------
 	// determine backup target
@@ -189,29 +193,50 @@ func main() {
 	// prepare local backupfile & compose
 	backupFilePath, err := backup.PrepareBackupFilePath(cargoportLocal, targetPath, *localOutputDir, *tagOutputString, *skipLocal)
 	if err != nil {
-		logger.LogxWithFields("error", fmt.Sprintf("Failure to determine output path: %v", err), map[string]interface{}{
+		logger.LogxWithFields("fatal", fmt.Sprintf("Failure to determine output path: %v", err), map[string]interface{}{
 			"package":  "main",
 			"target":   filepath.Base(targetPath),
 			"root_dir": cargoportLocal,
 		})
 	}
 
-	// begin backup job timer
-	timeBeginJob := time.Now()
+	// define job context based on determined information thus far in the job process
+	jobCTX := jobcontext.JobContext{
+		Target:    filepath.Base(targetPath),
+		Remote:    (*remoteHost != ""),
+		Docker:    dockerEnabled,
+		SkipLocal: *skipLocal,
+		JobID:     "empty_id",
+		StartTime: time.Now(), // begin timer now
+		TargetDir: targetPath,
+		RootDir:   cargoportLocal,
+		Tag:       *tagOutputString,
+	}
 
-	// log & print job start
-	logger.Logx.WithField("package", "spacer").Infof(" --------------------------------------------------- ")
+	// generate job ID & populate context
+	jobID := jobcontext.GenerateJobID(jobCTX)
+	jobCTX.JobID = jobID
 
 	logger.LogxWithFields("info", "New backup job added", map[string]interface{}{
 		"package": "main",
-		"target":  filepath.Base(targetPath),
+		"target":  jobCTX.Target,
+		"remote":  jobCTX.Remote,
+		"docker":  jobCTX.Docker,
+		"job_id":  jobCTX.JobID,
+		"tag":     jobCTX.Tag,
 		"version": Version,
 	})
 
-	logger.LogxWithFields("debug", fmt.Sprintf("Beginning backup job via %s", targetPath), map[string]interface{}{
+	logger.LogxWithFields("debug", fmt.Sprintf("Beginning backup job via %s", jobCTX.TargetDir), map[string]interface{}{
 		"package":    "main",
-		"target":     filepath.Base(targetPath),
-		"target_dir": targetPath,
+		"target":     jobCTX.Target,
+		"remote":     jobCTX.Remote,
+		"docker":     jobCTX.Docker,
+		"skip_local": jobCTX.SkipLocal,
+		"target_dir": jobCTX.TargetDir,
+		"job_id":     jobCTX.JobID,
+		"tag":        jobCTX.Tag,
+		"version":    Version,
 	})
 
 	// declare target base name for metrics and logging tracking
@@ -294,7 +319,7 @@ func main() {
 	}
 
 	// job completion banner & time calculation
-	jobDuration := time.Since(timeBeginJob)
+	jobDuration := time.Since(jobCTX.StartTime)
 	executionSeconds := jobDuration.Seconds()
 
 	logger.LogxWithFields("info", fmt.Sprintf("Job success, execution time: %.2fs", executionSeconds), map[string]interface{}{
