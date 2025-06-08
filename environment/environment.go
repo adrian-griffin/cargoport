@@ -23,6 +23,8 @@ type ConfigFile struct {
 	Version             string `yaml:"version,omitempty"`
 	SSHKeyDir           string `yaml:"ssh_key_directory"`
 	SSHKeyName          string `yaml:"ssh_private_key_name"`
+	ICMPTest            bool   `yaml:"icmp_test"`
+	SSHTest             bool   `yaml:"ssh_test"`
 }
 
 // system-wide config reference path
@@ -288,6 +290,11 @@ default_remote_host: 10.0.0.1
 default_remote_output_dir: %s/remote
 # default_remote_output_dir: ~/
 
+# [ NETWORK SETTINGS ]
+# These tests run before every remote transfer
+# If you enable SSH tests, you will be prompted for the remote password twice unless you copy the SSH key
+icmp_test: true
+ssh_test: false
 
 # [ KEYTOOL DEFAULTS ]
 ssh_key_directory: %s/keys

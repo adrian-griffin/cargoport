@@ -14,6 +14,11 @@ default_remote_host: 10.0.0.1
 default_remote_output_dir: /var/cargoport/remote
 # default_remote_output_dir: ~/
 
+# [ NETWORK SETTINGS ]
+# These tests run before every remote transfer
+# If you enable SSH tests, you will be prompted for the remote password twice unless you copy the SSH key
+icmp_test: true
+ssh_test: false
 
 # [ KEYTOOL DEFAULTS ]
 ssh_key_directory: /var/cargoport/keys

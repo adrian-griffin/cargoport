@@ -4,8 +4,9 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [0.90.2] - 2025-6-7
+## [0.91.0] - 2025-6-7
 - Added 22/tcp socket connection timeouts to alleviate hang if remote host responds to ICMP but silently INPUT; REJECTs SSH traffic in its ACLs
+- Added ICMP & SSH network test toggles to configfile
 
 ## [0.90.1] - 2025-6-7
 - Added backup/snapshot output file name tagging

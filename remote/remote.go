@@ -25,15 +25,19 @@ func HandleRemoteTransfer(filePath, remoteUser, remoteHost, remoteOutputDir stri
 	// <here> need to add logic here to toggle off icmp & ssh tests/validations in configfile
 	cargoportKey := filepath.Join(configFile.SSHKeyDir, configFile.SSHKeyName)
 
-	// try to ensure remote host is reachable via icmp
-	if err := nethandler.ICMPRemoteHost(remoteHost, remoteUser); err != nil {
-		return fmt.Errorf("remote host is not responding to ICMP: %v", err) //<~ gotta add icmp toggle in config+nethandler
+	if configFile.ICMPTest {
+		// test to ensure remote host is reachable via icmp
+		if err := nethandler.ICMPRemoteHost(remoteHost, remoteUser); err != nil {
+			return fmt.Errorf("remote host is not responding to ICMP: %v", err)
+		}
 	}
 
-	// test ssh connectivity prior to attempting rsync
-	//if err := nethandler.SSHTestRemoteHost(remoteHost, remoteUser, cargoportKey); err != nil {
-	//	return err
-	//}
+	if configFile.SSHTest {
+		// test ssh connectivity prior to attempting rsync
+		if err := nethandler.SSHTestRemoteHost(remoteHost, remoteUser, cargoportKey); err != nil {
+			return fmt.Errorf("remote host is not responding to SSH: %v", err)
+		}
+	}
 
 	// proceed with remote transfer
 	err := sendToRemote(remoteOutputDir, remoteUser, remoteHost, filepath.Base(filePath), filePath, cargoportKey, configFile)
