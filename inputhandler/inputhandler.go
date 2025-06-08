@@ -78,10 +78,15 @@ func InterpretFlags(
 			}
 		}
 
-		// validate `remoteHost` a valid IP address or hostname
+		// validate `remoteHost` a valid IP address or hostname & ICMP ping it if enabled in config
 		if *remoteHost != "" {
 			if err := nethandler.ValidateIP(*remoteHost); err != nil {
 				return fmt.Errorf("remote host validation error: %v", err)
+			}
+		}
+		if configFile.ICMPTest {
+			if err := nethandler.ICMPRemoteHost(*remoteHost); err != nil {
+				return fmt.Errorf("remote host unavailable by ICMP: %v", err)
 			}
 		}
 
