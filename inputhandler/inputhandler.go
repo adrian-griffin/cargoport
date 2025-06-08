@@ -35,25 +35,6 @@ func validateInput(targetDir, dockerName, remoteUser, remoteHost, remoteOutputDi
 		return fmt.Errorf("cannot specify both a target directory and docker container name")
 	}
 
-	//<subsection>   Validate Remote Transfer Flags
-	///-----------
-
-	// > Ensure that both remote host & remote user are passed when one is passed
-	// if either remote host or remote user are passed
-	if *remoteHost != "" || *remoteUser != "" {
-		// if NOT both remote host and remote user are passed, return err
-		if !(*remoteHost != "" && *remoteUser != "") {
-			return fmt.Errorf("both `-remote-host` and `-remote-user` must be passed")
-		}
-	}
-
-	// validate `remoteHost` a valid IP address or hostname
-	if *remoteHost != "" {
-		if err := nethandler.ValidateIP(*remoteHost); err != nil {
-			return fmt.Errorf("remote host validation error: %v", err)
-		}
-	}
-
 	//<subsection>   Validate Backup Target Flags
 	///-----------
 	// if `skipLocal` is true, ensure remote send is configured
@@ -87,6 +68,22 @@ func InterpretFlags(
 	// determine if job is intended to involve remote transfer
 	remoteTransferBool := *sendDefaults || *remoteHost != "" || *remoteUser != ""
 	if remoteTransferBool {
+
+		// > Ensure that both remote host & remote user are passed when one is passed
+		// if either remote host or remote user are passed
+		if *remoteHost != "" || *remoteUser != "" {
+			// if NOT both remote host and remote user are passed, return err
+			if *remoteHost == "" || *remoteUser == "" {
+				return fmt.Errorf("both `-remote-host` and `-remote-user` must be passed")
+			}
+		}
+
+		// validate `remoteHost` a valid IP address or hostname
+		if *remoteHost != "" {
+			if err := nethandler.ValidateIP(*remoteHost); err != nil {
+				return fmt.Errorf("remote host validation error: %v", err)
+			}
+		}
 
 		// if remote output dir is empty, use configfile defaults
 		if *remoteOutputDir == "" {
