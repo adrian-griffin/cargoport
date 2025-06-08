@@ -74,7 +74,7 @@ func main() {
 		fmt.Println("        Restart docker container after successful backup. Enabled by default")
 		fmt.Println("\n  [Remote Transfer Flags]")
 		fmt.Println("     -skip-local")
-		fmt.Println("        Skip local backup and only send to the remote target (Note: /tmp/ used for tempfile)")
+		fmt.Println("        Skip local backup and only send to the remote target (Note: utilized `/tmp`)")
 		fmt.Println("     -remote-user <user>")
 		fmt.Println("        Remote machine username")
 		fmt.Println("     -remote-host <host>")

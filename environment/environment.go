@@ -276,7 +276,7 @@ func createDefaultConfig(configFilePath, rootDir string) error {
 ## Please only change this default directory using -setup flag
 default_cargoport_directory: %s
 
-## Skip all local backups by default, unless -skip-local=false is passed
+## Skip all local backups from this machine by default, requires remote flags
 skip_local_backups: false
 
 # [ REMOTE TRANSFER DEFAULTS]
