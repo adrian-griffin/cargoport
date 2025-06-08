@@ -4,9 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [0.91.3] - 2025-6-7
+## [0.92.4] - 2025-6-7
 - Introduced new structured logger functionality
-- Migrated main.go to using new log output
+- Migrated all packages to using new log output
+- Initialized new logger.go package
+- Deployed frameworks for more effective structured logging for the project long term 
 
 ## [0.91.2] - 2025-6-7
 - Added 22/tcp socket connection timeouts to alleviate hang if remote host responds to ICMP but silently INPUT; REJECTs SSH traffic in its ACLs

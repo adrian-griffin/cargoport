@@ -3,10 +3,11 @@ package sysutil
 import (
 	"bytes"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
+
+	"github.com/adrian-griffin/cargoport/logger"
 )
 
 // executes command on os
@@ -36,12 +37,12 @@ func RunCommandWithOutput(cmd string, args ...string) (string, error) {
 // remove file from os
 func RemoveTempFile(filePath string) error {
 
-	log.Printf("Cleaning up tempfile at %s\n", filePath)
+	logger.Logx.Infof("Cleaning up tempfile at %s\n", filePath)
 
 	if err := os.Remove(filePath); err != nil {
 		return fmt.Errorf("error removing tempfile: %v", err)
 	} else {
-		fmt.Printf("Tempfile %s removed\n", filePath)
+		logger.Logx.Infof("Tempfile %s removed\n", filePath)
 	}
 
 	return nil

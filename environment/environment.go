@@ -32,27 +32,6 @@ type ConfigFile struct {
 // system-wide config reference path
 const ConfigFilePointer = "/etc/cargoport.conf"
 
-// defines log & stdout styling and content at start of backups
-func LogStart(format string, args ...interface{}) {
-	log.Println("-------------------------------------------------------------------------")
-	log.Printf(format, args...)
-	log.Println("-------------------------------------------------------------------------")
-	fmt.Println("-------------------------------------------------------------------------")
-	fmt.Printf(format, args...)
-	fmt.Println("-------------------------------------------------------------------------")
-}
-
-// defines log & stdout styling and content at end of backups
-func LogEnd(format string, args ...interface{}) {
-
-	log.Println("-------------------------------------------------------------------------")
-	log.Printf(format, args...)
-	log.Println("-------------------------------------------------------------------------")
-	fmt.Println("-------------------------------------------------------------------------")
-	fmt.Printf(format, args...)
-	fmt.Println("-------------------------------------------------------------------------")
-}
-
 // determines true configfile path
 func GetConfigFilePath() (string, error) {
 	// opens configfile pointer file to reference path to yamlfile

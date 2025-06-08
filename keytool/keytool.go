@@ -2,13 +2,14 @@ package keytool
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"os/user"
 	"path/filepath"
 	"syscall"
 	"time"
+
+	"github.com/adrian-griffin/cargoport/logger"
 )
 
 // create local cargoport keypair
@@ -18,8 +19,7 @@ func GenerateSSHKeypair(sshDir, keyName string) error {
 
 	// if the private key already exists, do not overwrite
 	if _, err := os.Stat(privateKeyPath); err == nil {
-		log.Printf("SSH Key '%s' already exists. Skipping generation.\n", privateKeyPath)
-		fmt.Printf("SSH Key '%s' already exists. Skipping generation.\n", privateKeyPath)
+		logger.Logx.Infof("SSH Key '%s' already exists, skipping generation", privateKeyPath)
 		return nil
 	}
 
@@ -50,7 +50,7 @@ func GenerateSSHKeypair(sshDir, keyName string) error {
 		"-C", keyComment,
 	)
 
-	// for cleanliness, redirect stdout/stderr if desired
+	// for visibility, redirect stdout/stderr
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
@@ -63,7 +63,8 @@ func GenerateSSHKeypair(sshDir, keyName string) error {
 		return fmt.Errorf("failed to chmod private key: %v", err)
 	}
 
-	fmt.Printf("SSH key pair generated at: %s (public: %s)", privateKeyPath, publicKeyPath)
+	logger.Logx.Infof("SSH key pair generated at: %s", privateKeyPath)
+	logger.Logx.Infof("                           %s", publicKeyPath)
 	return nil
 }
 
@@ -82,8 +83,7 @@ func CopyPublicKey(sshPrivKeypath, remoteUser, remoteHost string) error {
 		return fmt.Errorf("failed to copy SSH public key to remote: %v", err)
 	}
 
-	log.Printf("Successfully installed local public key into %s@%s:~/.ssh/authorized_keys\n", remoteUser, remoteHost)
-	//logEnd("SSH Key Copied    |          Complete        |    <target: %s>  \n", remoteHost)
+	logger.Logx.Infof("Successfully installed local public key into %s@%s:~/.ssh/authorized_keys", remoteUser, remoteHost)
 	return nil
 }
 

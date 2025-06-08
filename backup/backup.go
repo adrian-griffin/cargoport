@@ -5,12 +5,12 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/adrian-griffin/cargoport/docker"
+	"github.com/adrian-griffin/cargoport/logger"
 	"github.com/adrian-griffin/cargoport/sysutil"
 )
 
@@ -24,29 +24,29 @@ func DetermineBackupTarget(targetDir, dockerName *string) (string, string, bool)
 		var err error
 		composeFilePath, err = docker.FindComposeFile(*dockerName)
 		if err != nil {
-			log.Fatalf("ERROR <storage>: %v", err)
+			logger.Logx.Fatalf("Compose file validation failure: %v", err)
 		}
-		//log.Println("<DEBUG>: TARGET DOCKER FOUND")
+		//("<DEBUG>: TARGET DOCKER FOUND")
 		return filepath.Dir(composeFilePath), composeFilePath, true
 	}
 	// validates target dir and returns it, keeps dockerMode disabled
 	if *targetDir != "" {
 		targetDirectory := strings.TrimSuffix(*targetDir, "/")
 		if stat, err := os.Stat(targetDirectory); err != nil || !stat.IsDir() {
-			log.Fatalf("ERROR <storage>: Invalid target directory: %s", targetDirectory)
+			logger.Logx.Fatalf("Invalid target directory: %s", targetDirectory)
 		}
 		// tries to determine composefile
 		possibleComposeFile := filepath.Join(targetDirectory, "docker-compose.yml")
 		if _, err := os.Stat(possibleComposeFile); err == nil {
-			//log.Println("<DEBUG>: DOCKER COMPOSE FILE FOUND IN TARGET DIR")
+			//("<DEBUG>: DOCKER COMPOSE FILE FOUND IN TARGET DIR")
 			return targetDirectory, possibleComposeFile, true
 		}
 
-		//log.Println("<DEBUG>: NO DOCKER COMPOSE FILE FOUND, TREATING AS REGULAR DIR")
+		//("<DEBUG>: NO DOCKER COMPOSE FILE FOUND, TREATING AS REGULAR DIR")
 		return targetDirectory, "", false
 	}
 
-	log.Fatalf("ERROR <storage>: No valid target directory or Docker service specified")
+	logger.Logx.Fatal("No valid target directory or Docker service specified")
 	return "", "", dockerEnabled
 }
 
@@ -68,7 +68,7 @@ func PrepareBackupFilePath(localBackupDir, targetDir, customOutputDir, tagOutput
 
 	// if baseName is empty, use backup name
 	if baseName == "" || baseName == "." || baseName == ".." {
-		log.Printf("WARN <storage>: Invalid target directory name '%s', saving backup as 'unnamed-backup.bak.tar.gz'", targetDir)
+		logger.Logx.Errorf("Invalid target directory name '%s', saving backup as 'unnamed-backup.bak.tar.gz'", targetDir)
 		baseName = "unnamed-backup"
 	}
 
@@ -114,9 +114,7 @@ func ValidateBackupFilePath(backupFilePath string) error {
 // compresses target directory into output file tarball usin Go
 func CompressDirectory(targetDir, outputFile string) error {
 	// compress target directory
-	fmt.Println("-------------------------------------------------------------------------")
-	fmt.Println("Compressing container directory . . .")
-	fmt.Println("-------------------------------------------------------------------------")
+	logger.Logx.Info("Compressing container directory") // likely debug
 
 	// ensure base dir is valid
 	fi, err := os.Stat(targetDir)
@@ -217,17 +215,15 @@ func CompressDirectory(targetDir, outputFile string) error {
 	}
 
 	// print to cli & log to logfile regarding successful directory compression
-	log.Printf("Contents of %s successfully compressed to %s", targetDir, outputFile)
-	fmt.Printf("Contents of %s successfully compressed to %s\n", targetDir, outputFile)
+	logger.Logx.Infof("Contents of %s successfully compressed to %s", targetDir, outputFile)
 	return nil
 }
 
 // shells out to cli to compresses target directory into output file tarball
 func ShellCompressDirectory(targetDir, outputFile string) error {
 	// compress target directory
-	fmt.Println("-------------------------------------------------------------------------")
-	fmt.Println("Compressing container directory . . .")
-	fmt.Println("-------------------------------------------------------------------------")
+	logger.Logx.Info("Compressing container directory") // likely debug
+
 	parentDir := filepath.Dir(targetDir)
 	baseDir := filepath.Base(targetDir)
 
@@ -246,17 +242,13 @@ func ShellCompressDirectory(targetDir, outputFile string) error {
 		baseDir,   // Directory to compress
 	)
 	if err != nil {
-		log.Printf("Error compressing directory: %s/%s", parentDir, baseDir)
+		logger.Logx.Errorf("Error compressing directory: %s/%s", parentDir, baseDir)
 		os.Remove(outputFile) // ensure partial file is cleaned up
 		return fmt.Errorf("error compressing directory: %v", err)
 	}
 
 	// print to cli & log to logfile regarding successful directory compression
-	log.Printf("Contents of %s successfully compressed to %s",
-		targetDir,
-		outputFile,
-	)
-	fmt.Printf("Contents of %s successfully compressed to %s\n",
+	logger.Logx.Infof("Contents of %s successfully compressed to %s",
 		targetDir,
 		outputFile,
 	)

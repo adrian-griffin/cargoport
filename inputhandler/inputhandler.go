@@ -2,7 +2,6 @@ package inputhandler
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/adrian-griffin/cargoport/environment"
 	"github.com/adrian-griffin/cargoport/logger"
@@ -120,7 +119,6 @@ func InterpretFlags(
 	// validate inputs
 	err := validateInput(targetDir, dockerName, remoteUser, remoteHost, remoteOutputDir, skipLocal, configFile)
 	if err != nil {
-		fmt.Printf("ERROR <input>: %v", err)
-		log.Fatalf("ERROR <input>: %v", err)
+		logger.Logx.Fatalf("Input errors: %v", err)
 	}
 }

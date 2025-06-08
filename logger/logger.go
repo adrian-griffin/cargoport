@@ -13,6 +13,24 @@ import (
 // global logging
 var Logx *logrus.Logger
 
+func LogXWithFields(log *logrus.Logger, level string, msg string, fields logrus.Fields) {
+	entry := log.WithFields(fields)
+	switch level {
+	case "debug":
+		entry.Debug(msg)
+	case "info":
+		entry.Info(msg)
+	case "warn":
+		entry.Warn(msg)
+	case "error":
+		entry.Error(msg)
+	case "fatal":
+		entry.Fatal(msg)
+	default:
+		entry.Info(msg)
+	}
+}
+
 func InitLogging(cargoportBase string) (logFilePath string) {
 
 	logFilePath = filepath.Join(cargoportBase, "cargoport-main.log")

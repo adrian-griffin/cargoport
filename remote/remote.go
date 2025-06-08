@@ -2,13 +2,13 @@ package remote
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/adrian-griffin/cargoport/environment"
 	"github.com/adrian-griffin/cargoport/keytool"
+	"github.com/adrian-griffin/cargoport/logger"
 	"github.com/adrian-griffin/cargoport/nethandler"
 	"github.com/adrian-griffin/cargoport/sysutil"
 )
@@ -81,7 +81,7 @@ func sendToRemote(passedRemotePath, passedRemoteUser, passedRemoteHost, backupFi
 		remoteFilePath = fmt.Sprintf("~/%s", backupFileNameBase)
 	}
 
-	log.Printf("Transferring to remote %s@%s:%s . . .", passedRemoteUser, passedRemoteHost, remoteFilePath)
+	logger.Logx.Infof("Transferring to remote %s@%s:%s . . .", passedRemoteUser, passedRemoteHost, remoteFilePath)
 
 	rsyncArgs := []string{
 		"-avz",
@@ -101,6 +101,6 @@ func sendToRemote(passedRemotePath, passedRemoteUser, passedRemoteHost, backupFi
 		return fmt.Errorf("rsync failed: %v", err)
 	}
 
-	log.Printf("Compressed File Successfully Transferred to %s", passedRemoteHost)
+	logger.Logx.Infof("Compressed File Successfully Transferred to %s", passedRemoteHost)
 	return nil
 }

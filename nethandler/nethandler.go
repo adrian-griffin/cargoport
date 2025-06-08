@@ -5,6 +5,7 @@ import (
 	"net"
 	"strings"
 
+	"github.com/adrian-griffin/cargoport/logger"
 	"github.com/adrian-griffin/cargoport/sysutil"
 )
 
@@ -41,6 +42,6 @@ func SSHTestRemoteHost(remoteHost, remoteUser, sshPrivKeypath string) error {
 	if err != nil {
 		return fmt.Errorf("failed to connect via SSH to %s@%s: %v", remoteUser, remoteHost, err)
 	}
-	fmt.Printf("SSH connection test success; remote user: %s\n", strings.TrimSpace(string(out)))
+	logger.Logx.Debugf("SSH connection test success; remote user: %s", strings.TrimSpace(string(out)))
 	return nil
 }
