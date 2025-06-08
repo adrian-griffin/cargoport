@@ -51,8 +51,8 @@ func DetermineBackupTarget(targetDir, dockerName *string) (string, string, bool)
 }
 
 // determines path for new backupfile based on user input
-func PrepareBackupFilePath(localBackupDir, targetDir, customOutputDir string, skipLocal bool) (string, error) {
-	// sanitize target directory
+func PrepareBackupFilePath(localBackupDir, targetDir, customOutputDir, tagOutputString string, skipLocal bool) (string, error) {
+	// sanitize target directory suffix
 	targetDir = strings.TrimSuffix(targetDir, "/")
 	baseName := filepath.Base(targetDir)
 
@@ -67,7 +67,7 @@ func PrepareBackupFilePath(localBackupDir, targetDir, customOutputDir string, sk
 		baseName = "unnamed-backup"
 	}
 
-	backupFileName := baseName + ".bak.tar.gz"
+	backupFileName := baseName + "-" + tagOutputString + ".bak.tar.gz"
 	var filePathString string
 
 	switch {

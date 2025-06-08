@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.90.1] - 2025-6-7
+- Added backup/snapshot output file name tagging
+
 ## [0.89.44] - 2025-6-7
 - Fixing remote transfer boolean validation logic bug
 - Fixed inventory init verbosity bug when taking non-setup pathways

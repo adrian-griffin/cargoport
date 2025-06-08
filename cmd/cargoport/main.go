@@ -1,6 +1,6 @@
 package main
 
-// Cargoport v0.89.44
+// Cargoport v0.90.44
 
 import (
 	"flag"
@@ -19,7 +19,7 @@ import (
 	"github.com/adrian-griffin/cargoport/sysutil"
 )
 
-const Version = "v0.89.44"
+const Version = "v0.90.44"
 const motd = "kind words cost nothing <3"
 
 func main() {
@@ -46,6 +46,9 @@ func main() {
 	// ssh key flags
 	newSSHKeyBool := flag.Bool("generate-keypair", false, "Generate new SSH key for cargoport")
 	copySSHKeyBool := flag.Bool("copy-key", false, "Copy cargoport SSH key to remote host")
+
+	// snapshot versioning and tagging flags
+	tagOutputString := flag.String("-tag", "", "Append identifying tag to output file name (e.g: service1-<tag>.bak.tar.gz)")
 
 	// custom help messaging
 	flag.Usage = func() {
@@ -83,12 +86,16 @@ func main() {
 		fmt.Println("        Remote target directory (file will save as <remote-dir>/<file>.bak.tar.gz)")
 		fmt.Println("     -remote-send-defaults")
 		fmt.Println("        Remote transfer backup using default remote values in config.yml")
+		fmt.Println("     -tag <tag>")
+		fmt.Println("        Append identifying tag to output file name (e.g: service1-<tag>.bak.tar.gz)")
 
 		fmt.Println("\n[Examples]")
 		fmt.Println("  cargoport -setup")
+		fmt.Println("  cargoport -copy-key -remote-host <host> -remote-user <username>")
 		fmt.Println("  cargoport -target-dir=/path/to/dir -remote-user=admin -remote-host=<host>")
 		fmt.Println("  cargoport -docker-name=container-name -remote-send-defaults -skip-local")
-		fmt.Println("  cargoport -copy-key -remote-host <host> -remote-user <username>")
+		fmt.Println("  cargoport -docker-name=container-name -tag='pre-pull' -restart-docker=false")
+
 		fmt.Println("\nFor more information, please see the git repo readme")
 	}
 
@@ -163,7 +170,7 @@ func main() {
 	targetPath, composeFilePath, dockerEnabled := backup.DetermineBackupTarget(targetDir, dockerName)
 
 	// prepare local backupfile & compose
-	backupFilePath, err := backup.PrepareBackupFilePath(cargoportLocal, targetPath, *localOutputDir, *skipLocal)
+	backupFilePath, err := backup.PrepareBackupFilePath(cargoportLocal, targetPath, *localOutputDir, *tagOutputString, *skipLocal)
 	if err != nil {
 		log.Fatalf("ERROR <storage>: Unable to prepare local backupfile output location: %v", err)
 	}
