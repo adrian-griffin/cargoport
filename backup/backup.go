@@ -56,6 +56,11 @@ func PrepareBackupFilePath(localBackupDir, targetDir, customOutputDir, tagOutput
 	targetDir = strings.TrimSuffix(targetDir, "/")
 	baseName := filepath.Base(targetDir)
 
+	// if output file tag is not emty, prepend it with a `-`
+	if tagOutputString != "" {
+		tagOutputString = "-" + tagOutputString
+	}
+
 	// validate that targetDir exists prior to continuing
 	if targetDirInfo, targetDirErr := os.Stat(targetDir); targetDirErr != nil || !targetDirInfo.IsDir() {
 		return "", fmt.Errorf("target directory %s does not exist or is not a directory: %v", targetDir, targetDirErr)
@@ -67,7 +72,7 @@ func PrepareBackupFilePath(localBackupDir, targetDir, customOutputDir, tagOutput
 		baseName = "unnamed-backup"
 	}
 
-	backupFileName := baseName + "-" + tagOutputString + ".bak.tar.gz"
+	backupFileName := baseName + tagOutputString + ".bak.tar.gz"
 	var filePathString string
 
 	switch {
