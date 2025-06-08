@@ -15,7 +15,7 @@ import (
 )
 
 // determines target dir for backup based on input user input
-func DetermineBackupTarget(targetDir, dockerName *string) (string, string, bool) {
+func DetermineBackupTarget(targetDir, dockerName *string) (string, string, bool, error) {
 	var composeFilePath string
 	dockerEnabled := false
 
@@ -24,30 +24,55 @@ func DetermineBackupTarget(targetDir, dockerName *string) (string, string, bool)
 		var err error
 		composeFilePath, err = docker.FindComposeFile(*dockerName, filepath.Base(*targetDir))
 		if err != nil {
-			logger.Logx.Fatalf("Compose file validation failure: %v", err)
+			logger.LogxWithFields("error", fmt.Sprintf("Compose file validation failure at %s", targetDir), map[string]interface{}{
+				"package": "backup",
+				"target":  filepath.Base(*targetDir),
+				"success": false,
+			})
+			return "", "", false, fmt.Errorf("failed to retrieve composefile path: %v", err)
 		}
 		//("<DEBUG>: TARGET DOCKER FOUND")
-		return filepath.Dir(composeFilePath), composeFilePath, true
+		return filepath.Dir(composeFilePath), composeFilePath, true, nil
 	}
 	// validates target dir and returns it, keeps dockerMode disabled
 	if *targetDir != "" {
 		targetDirectory := strings.TrimSuffix(*targetDir, "/")
 		if stat, err := os.Stat(targetDirectory); err != nil || !stat.IsDir() {
-			logger.Logx.Fatalf("Invalid target directory: %s", targetDirectory)
+			logger.LogxWithFields("error", fmt.Sprintf("Invalid target directory: %s", targetDirectory), map[string]interface{}{
+				"package": "backup",
+				"target":  filepath.Base(targetDirectory),
+				"success": false,
+			})
+			return "", "", false, fmt.Errorf("failed to check target directory: %v", err)
 		}
+
 		// tries to determine composefile
 		possibleComposeFile := filepath.Join(targetDirectory, "docker-compose.yml")
-		if _, err := os.Stat(possibleComposeFile); err == nil {
-			//("<DEBUG>: DOCKER COMPOSE FILE FOUND IN TARGET DIR")
-			return targetDirectory, possibleComposeFile, true
+		_, err := os.Stat(possibleComposeFile)
+		if err == nil {
+			logger.LogxWithFields("debug", fmt.Sprintf("Compose file found in target dir at %s", filepath.Join(targetDirectory, "docker-compose.yml")), map[string]interface{}{
+				"package": "backup",
+				"target":  filepath.Base(targetDirectory),
+			})
+			return targetDirectory, possibleComposeFile, true, nil
 		}
 
-		//("<DEBUG>: NO DOCKER COMPOSE FILE FOUND, TREATING AS REGULAR DIR")
-		return targetDirectory, "", false
+		logger.LogxWithFields("debug", fmt.Sprintf("Compose file not found in target dir at %s", filepath.Join(targetDirectory, "docker-compose.yml")), map[string]interface{}{
+			"package": "backup",
+			"target":  filepath.Base(targetDirectory),
+		})
+		logger.LogxWithFields("debug", fmt.Sprintf("Treating as regular dir backup and skipping docker jobs"), map[string]interface{}{
+			"package": "backup",
+			"target":  filepath.Base(targetDirectory),
+		})
+		return targetDirectory, "", false, nil
 	}
 
-	logger.Logx.Fatal("No valid target directory or Docker service specified")
-	return "", "", dockerEnabled
+	logger.LogxWithFields("error", fmt.Sprintf("Invalid -target-dir or -docker-name passed"), map[string]interface{}{
+		"package": "backup",
+		"target":  filepath.Base(filepath.Dir(composeFilePath)),
+	})
+	return "", "", dockerEnabled, fmt.Errorf("No valid target directory or Docker service specified")
 }
 
 // determines path for new backupfile based on user input
@@ -68,7 +93,12 @@ func PrepareBackupFilePath(localBackupDir, targetDir, customOutputDir, tagOutput
 
 	// if baseName is empty, use backup name
 	if baseName == "" || baseName == "." || baseName == ".." {
-		logger.Logx.Errorf("Invalid target directory name '%s', saving backup as 'unnamed-backup.bak.tar.gz'", targetDir)
+		logger.LogxWithFields("warn", fmt.Sprintf("Invalid target directory name '%s', saving backup as 'unnamed-backup.bak.tar.gz'", targetDir), map[string]interface{}{
+			"package":    "backup",
+			"target":     filepath.Base(baseName),
+			"output_dir": targetDir,
+			"tag":        tagOutputString,
+		})
 		baseName = "unnamed-backup"
 	}
 
@@ -114,7 +144,10 @@ func ValidateBackupFilePath(backupFilePath string) error {
 // compresses target directory into output file tarball usin Go
 func CompressDirectory(targetDir, outputFile string) error {
 	// compress target directory
-	logger.Logx.Info("Compressing container directory") // likely debug
+	logger.LogxWithFields("debug", fmt.Sprintf("Compressing target directory %s to %s", targetDir, outputFile), map[string]interface{}{
+		"package": "backup",
+		"target":  filepath.Base(targetDir),
+	})
 
 	// ensure base dir is valid
 	fi, err := os.Stat(targetDir)
@@ -215,14 +248,20 @@ func CompressDirectory(targetDir, outputFile string) error {
 	}
 
 	// print to cli & log to logfile regarding successful directory compression
-	logger.Logx.Infof("Contents of %s successfully compressed to %s", targetDir, outputFile)
+	logger.LogxWithFields("debug", fmt.Sprintf("Contents of %s successfully compressed to %s", targetDir, outputFile), map[string]interface{}{
+		"package": "backup",
+		"target":  filepath.Base(targetDir),
+	})
 	return nil
 }
 
 // shells out to cli to compresses target directory into output file tarball
 func ShellCompressDirectory(targetDir, outputFile string) error {
 	// compress target directory
-	logger.Logx.Info("Compressing container directory") // likely debug
+	logger.LogxWithFields("debug", fmt.Sprintf("Compressing target directory %s to %s", targetDir, outputFile), map[string]interface{}{
+		"package": "backup",
+		"target":  filepath.Base(targetDir),
+	})
 
 	parentDir := filepath.Dir(targetDir)
 	baseDir := filepath.Base(targetDir)
@@ -242,15 +281,18 @@ func ShellCompressDirectory(targetDir, outputFile string) error {
 		baseDir,   // Directory to compress
 	)
 	if err != nil {
-		logger.Logx.Errorf("Error compressing directory: %s/%s", parentDir, baseDir)
+		logger.LogxWithFields("error", fmt.Sprintf("Error compressing directory: %s/%s", parentDir, baseDir), map[string]interface{}{
+			"package": "backup",
+			"target":  baseDir,
+		})
 		os.Remove(outputFile) // ensure partial file is cleaned up
 		return fmt.Errorf("error compressing directory: %v", err)
 	}
 
 	// print to cli & log to logfile regarding successful directory compression
-	logger.Logx.Infof("Contents of %s successfully compressed to %s",
-		targetDir,
-		outputFile,
-	)
+	logger.LogxWithFields("info", fmt.Sprintf("Contents of %s successfully compressed to %s", targetDir, outputFile), map[string]interface{}{
+		"package": "backup",
+		"target":  baseDir,
+	})
 	return nil
 }

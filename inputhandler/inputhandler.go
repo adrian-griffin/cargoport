@@ -2,6 +2,7 @@ package inputhandler
 
 import (
 	"fmt"
+	"path/filepath"
 
 	"github.com/adrian-griffin/cargoport/environment"
 	"github.com/adrian-griffin/cargoport/logger"
@@ -70,7 +71,7 @@ func InterpretFlags(
 	remoteUser, remoteHost, remoteOutputDir *string,
 	sendDefaults *bool,
 	configFile environment.ConfigFile,
-) {
+) (err error) {
 	// validate or override flags with configfile values
 
 	// determine if job is intended to perform skip local
@@ -117,8 +118,14 @@ func InterpretFlags(
 	}
 
 	// validate inputs
-	err := validateInput(targetDir, dockerName, remoteUser, remoteHost, remoteOutputDir, skipLocal, configFile)
+	err = validateInput(targetDir, dockerName, remoteUser, remoteHost, remoteOutputDir, skipLocal, configFile)
 	if err != nil {
-		logger.Logx.WithField("package", "inputhandler").Fatalf("Input validation errors: %v", err)
+		logger.LogxWithFields("error", fmt.Sprintf("Input validation errors: %v", err), map[string]interface{}{
+			"package": "inputhandler",
+			"target":  filepath.Base(*targetDir),
+		})
 	}
+
+	return nil
+
 }

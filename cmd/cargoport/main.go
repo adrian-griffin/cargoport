@@ -164,12 +164,27 @@ func main() {
 	}
 
 	// interpret flags & handle config overrides
-	inputhandler.InterpretFlags(targetDir, dockerName, localOutputDir, skipLocal, remoteUser, remoteHost, remoteOutputDir, sendDefaultsBool, *configFile)
+	err = inputhandler.InterpretFlags(targetDir, dockerName, localOutputDir, skipLocal, remoteUser, remoteHost, remoteOutputDir, sendDefaultsBool, *configFile)
+	if err != nil {
+		logger.LogxWithFields("fatal", fmt.Sprintf("Failure to parse input: %v", err), map[string]interface{}{
+			"package": "main",
+			"target":  filepath.Base(*targetDir),
+			"success": false,
+		})
+	}
 
 	//<section>   Begin Backups
 	//------------
 	// determine backup target
-	targetPath, composeFilePath, dockerEnabled := backup.DetermineBackupTarget(targetDir, dockerName)
+	targetPath, composeFilePath, dockerEnabled, err := backup.DetermineBackupTarget(targetDir, dockerName)
+	if err != nil {
+		logger.LogxWithFields("fatal", fmt.Sprintf("Failure to determine backup target: %v", err), map[string]interface{}{
+			"package": "main",
+			"target":  filepath.Base(filepath.Dir(*targetDir)),
+			"success": false,
+			"docker":  true,
+		})
+	}
 
 	// prepare local backupfile & compose
 	backupFilePath, err := backup.PrepareBackupFilePath(cargoportLocal, targetPath, *localOutputDir, *tagOutputString, *skipLocal)

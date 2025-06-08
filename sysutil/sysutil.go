@@ -37,12 +37,12 @@ func RunCommandWithOutput(cmd string, args ...string) (string, error) {
 // remove file from os
 func RemoveTempFile(filePath string) error {
 
-	logger.Logx.Infof("Cleaning up tempfile at %s\n", filePath)
+	logger.Logx.WithField("package", "systutil").Debugf("Cleaning up tempfile at %s\n", filePath)
 
 	if err := os.Remove(filePath); err != nil {
 		return fmt.Errorf("error removing tempfile: %v", err)
 	} else {
-		logger.Logx.Infof("Tempfile %s removed\n", filePath)
+		logger.Logx.WithField("package", "sysutil").Debugf("Tempfile %s removed\n", filePath)
 	}
 
 	return nil
