@@ -3,7 +3,6 @@ package environment
 import (
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -35,27 +34,6 @@ const ConfigFilePointer = "/etc/cargoport.conf"
 
 // global logging
 var Logger *logrus.Logger
-
-// defines log & stdout styling and content at start of backups
-func LogStart(format string, args ...interface{}) {
-	log.Println("-------------------------------------------------------------------------")
-	log.Printf(format, args...)
-	log.Println("-------------------------------------------------------------------------")
-	fmt.Println("-------------------------------------------------------------------------")
-	fmt.Printf(format, args...)
-	fmt.Println("-------------------------------------------------------------------------")
-}
-
-// defines log & stdout styling and content at end of backups
-func LogEnd(format string, args ...interface{}) {
-
-	log.Println("-------------------------------------------------------------------------")
-	log.Printf(format, args...)
-	log.Println("-------------------------------------------------------------------------")
-	fmt.Println("-------------------------------------------------------------------------")
-	fmt.Printf(format, args...)
-	fmt.Println("-------------------------------------------------------------------------")
-}
 
 // determines true configfile path
 func GetConfigFilePath() (string, error) {
@@ -128,28 +106,28 @@ func InitEnvironment(configFile ConfigFile) (string, string, string, string, str
 
 	// create /$CARGOPORT/
 	if err = os.MkdirAll(cargoportBase, 0755); err != nil {
-		log.Fatalf("ERROR <environment>: Error creating directory %s: %v", cargoportLocal, err)
+		Logger.WithField("package", "environment").Fatalf("Error creating directory %s: %v", cargoportLocal, err)
 	}
 
 	// create /$CARGOPORT/local
 	if err = os.MkdirAll(cargoportLocal, 0755); err != nil {
-		log.Fatalf("ERROR <environment>: Error creating directory %s: %v", cargoportLocal, err)
+		Logger.WithField("package", "environment").Fatalf("Error creating directory %s: %v", cargoportLocal, err)
 	}
 
 	// create /$CARGOPORT/remote
 	if err = os.MkdirAll(cargoportRemote, 0755); err != nil {
-		log.Fatalf("ERROR <environment>: Error creating directory %s: %v", cargoportRemote, err)
+		Logger.WithField("package", "environment").Fatalf("Error creating directory %s: %v", cargoportRemote, err)
 	}
 
 	// create /$CARGOPORT/keys cargoportKeys
 	if err = os.MkdirAll(cargoportKeys, 0755); err != nil {
-		log.Fatalf("ERROR <environment>: Error creating directory %s: %v", cargoportKeys, err)
+		Logger.WithField("package", "environment").Fatalf("Error creating directory %s: %v", cargoportKeys, err)
 	}
 
 	// set 777 on /var/cargoport/remote for all users to access
 	err = sysutil.RunCommand("chmod", "-R", "777", cargoportRemote)
 	if err != nil {
-		log.Fatalf("ERROR <environtment>: Error setting %s permissions for remotewrite: %v", cargoportRemote, err)
+		Logger.WithField("package", "environment").Fatalf("Error setting %s permissions for remotewrite: %v", cargoportRemote, err)
 	}
 
 	// initialize logging
@@ -192,7 +170,7 @@ func SetupTool() {
 
 	// validate that current UID=0 during setuptool process
 	if os.Geteuid() != 0 {
-		log.Fatalf("ERROR <environment>: The -setup command must be run as root (e.g. with sudo).")
+		Logger.WithField("package", "environment").Fatal("The -setup command must be run as root (e.g. with sudo).")
 	}
 
 	fmt.Println("  |---- Cargoport Setup Wizard -----|")
@@ -233,11 +211,11 @@ func SetupTool() {
 	// init env and determine directories & logfile
 	cargoportBase, cargoportLocal, cargoportRemote, logFilePath, cargoportKeys := InitEnvironment(configFile)
 
-	fmt.Printf("Root directory initialized at: %s\n", cargoportBase)
-	fmt.Printf("Local backup directory: %s\n", cargoportLocal)
-	fmt.Printf("Remote backup directory: %s\n", cargoportRemote)
-	fmt.Printf("Keytool storage: %s\n", cargoportKeys)
-	fmt.Printf("Log file initialized at: %s\n", logFilePath)
+	Logger.WithField("package", "environment").Infof("Root directory initialized at: %s\n", cargoportBase)
+	Logger.WithField("package", "environment").Infof("Local backup directory: %s\n", cargoportLocal)
+	Logger.WithField("package", "environment").Infof("Remote backup directory: %s\n", cargoportRemote)
+	Logger.WithField("package", "environment").Infof("Keytool storage: %s\n", cargoportKeys)
+	Logger.WithField("package", "environment").Infof("Log file initialized at: %s\n", logFilePath)
 
 	fmt.Println("------")
 	fmt.Println(" ")
@@ -258,14 +236,13 @@ func SetupTool() {
 			case "y":
 				err := createDefaultConfig(configFilePath, rootDir)
 				if err != nil {
-					log.Fatalf("ERROR: Failed to create config.yml %v", err)
+					Logger.WithField("package", "environment").Fatalf("Failed to create config.yml %v", err)
 				}
-				log.Println("INFO <environment>: Default config.yml created at %s", configFilePath)
-				fmt.Println("Default config.yml created at %s", configFilePath)
+				Logger.WithField("package", "environment").Infof("Default config.yml created at %s", configFilePath)
 				break
 
 			case "n":
-				log.Println("WARN <environment>: Skipping automatic configfile creation, please ensure you manually create a config.yml file!")
+				Logger.WithField("package", "environment").Infof("Skipping automatic configfile creation, please ensure you manually create a config.yml file!")
 				break
 
 			default:
@@ -280,12 +257,12 @@ func SetupTool() {
 	// create ssh key pair
 	sshKeyName := "cargoport-id-ed25519"
 	if err := keytool.GenerateSSHKeypair(cargoportKeys, sshKeyName); err != nil {
-		log.Fatalf("ERROR <keytool>: Failed to generate SSH key: %v", err)
+		Logger.WithField("package", "environment").Fatalf("Failed to generate SSH key: %v", err)
 	}
 
 	// save true config at /etc/ reference
 	if err := saveTrueConfigReference(configFilePath); err != nil {
-		log.Fatalf("ERROR: Failed to save true config reference: %v", err)
+		Logger.WithField("package", "environment").Fatalf("Failed to save true config reference: %v", err)
 	}
 	fmt.Println("------")
 	fmt.Println(" ")
