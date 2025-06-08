@@ -83,10 +83,10 @@ func InterpretFlags(
 			if err := nethandler.ValidateIP(*remoteHost); err != nil {
 				return fmt.Errorf("remote host validation error: %v", err)
 			}
-		}
-		if configFile.ICMPTest {
-			if err := nethandler.ICMPRemoteHost(*remoteHost); err != nil {
-				return fmt.Errorf("remote host unavailable by ICMP: %v", err)
+			if configFile.ICMPTest {
+				if err := nethandler.ICMPRemoteHost(*remoteHost); err != nil {
+					return fmt.Errorf("remote host unavailable by ICMP: %v", err)
+				}
 			}
 		}
 
@@ -109,6 +109,13 @@ func InterpretFlags(
 			// if either remote user or remote host are empty
 			if configFile.RemoteUser == "" || configFile.RemoteHost == "" {
 				logger.Logx.WithField("package", "inputhandler").Fatal("Default remote host and username must be set in config.yml in order to use -remote-send-defaults")
+			}
+
+			// icmp check remote host if enabled
+			if configFile.ICMPTest {
+				if err := nethandler.ICMPRemoteHost(*remoteHost); err != nil {
+					return fmt.Errorf("remote host unavailable by ICMP: %v", err)
+				}
 			}
 		}
 	} else {

@@ -287,7 +287,7 @@ log_level: info       # 'debug', 'info', 'warn', 'error', 'fatal'
 
 # defines .log output type depending on your taste
 # json works well if you use jq with it
-log_type: json        # 'json' or 'text'
+log_type: text        # 'json' or 'text'
 `, rootDir, rootDir, rootDir)
 
 	// Write default config file
