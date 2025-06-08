@@ -22,7 +22,7 @@ func DetermineBackupTarget(targetDir, dockerName *string) (string, string, bool)
 	// validates composefile, returns its path and dirpath, and enables dockerMode
 	if *dockerName != "" {
 		var err error
-		composeFilePath, err = docker.FindComposeFile(*dockerName)
+		composeFilePath, err = docker.FindComposeFile(*dockerName, filepath.Base(*targetDir))
 		if err != nil {
 			logger.Logx.Fatalf("Compose file validation failure: %v", err)
 		}

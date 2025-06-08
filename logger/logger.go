@@ -31,7 +31,7 @@ func logLevelStringSwitch(logLevelString string) logrus.Level {
 	}
 }
 
-func LogxWithFields(levelString string, msg string, fields logrus.Fields) {
+func LogxWithFields(levelString string, msg string, fields map[string]interface{}) {
 	entry := Logx.WithFields(fields)
 
 	level := logLevelStringSwitch(levelString)

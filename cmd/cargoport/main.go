@@ -184,9 +184,12 @@ func main() {
 	logger.Logx.WithField("version", Version).Info("New backup job added")
 	logger.Logx.WithField("target", filepath.Base(targetPath)).Infof("Beginning backup job via %s", targetPath)
 
+	// declare target base name for metrics and logging tracking
+	targetBaseName := filepath.Base(targetPath)
+
 	// handle pre-backup docker tasks
 	if dockerEnabled {
-		if err := docker.HandleDockerPreBackup(composeFilePath); err != nil {
+		if err := docker.HandleDockerPreBackup(composeFilePath, targetBaseName); err != nil {
 			logger.Logx.Fatalf("Pre-snapshot docker tasks failed: %v", err)
 		}
 	}

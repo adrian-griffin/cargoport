@@ -244,7 +244,11 @@ func SetupTool() {
 	fmt.Println(" ")
 	time.Sleep(500 * time.Millisecond)
 
-	logger.Logx.WithField("package", "environment").Infof("Environment setup completed successfully!")
+	logger.Logx.WithField("package", "").Infof()
+	logger.LogxWithFields("info", fmt.Sprintf("Environment setup completed successfully!"), map[string]interface{}{
+		"package": "environment",
+		"success": true,
+	})
 	fmt.Println(" ")
 }
 

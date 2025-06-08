@@ -20,7 +20,7 @@ func GenerateSSHKeypair(sshDir, keyName string) error {
 
 	// if the private key already exists, do not overwrite
 	if _, err := os.Stat(privateKeyPath); err == nil {
-		logger.Logx.WithField("action", "keytool").Infof("SSH Key '%s' already exists, skipping generation", privateKeyPath)
+		logger.Logx.WithField("package", "keytool").Infof("SSH Key '%s' already exists, skipping generation", privateKeyPath)
 		return nil
 	}
 
@@ -64,7 +64,7 @@ func GenerateSSHKeypair(sshDir, keyName string) error {
 		return fmt.Errorf("failed to chmod private key: %v", err)
 	}
 
-	logger.Logx.WithField("action", "keytool").Infof("SSH key pair generated at: %s(.pub)", privateKeyPath)
+	logger.Logx.WithField("package", "keytool").Infof("SSH key pair generated at: %s(.pub)", privateKeyPath)
 	return nil
 }
 
@@ -84,7 +84,7 @@ func CopyPublicKey(sshPrivKeypath, remoteUser, remoteHost string) error {
 	}
 
 	logger.LogxWithFields("info", fmt.Sprintf("Successfully installed local public key into %s@%s:~/.ssh/authorized_keys", remoteUser, remoteHost), logrus.Fields{
-		"action":      "keytool",
+		"package":     "keytool",
 		"remote":      true,
 		"success":     true,
 		"remote_host": remoteHost,

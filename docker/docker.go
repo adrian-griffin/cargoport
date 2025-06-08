@@ -12,11 +12,14 @@ import (
 )
 
 // locates docker compose file based on container name
-func FindComposeFile(containerName string) (string, error) {
+func FindComposeFile(containerName, targetBaseName string) (string, error) {
 	cmd := exec.Command("docker", "inspect", containerName, "--format", "{{ index .Config.Labels \"com.docker.compose.project.working_dir\" }}")
 	output, err := cmd.Output()
 	if err != nil {
-		logger.Logx.Errorf("Failed to locate docker compose file for container '%s': %v", containerName, err)
+		logger.LogxWithFields("error", fmt.Sprintf("Failed to locate docker compose file for container '%s': %v", containerName, err), map[string]interface{}{
+			"package": "docker",
+			"target":  targetBaseName,
+		})
 		return "", fmt.Errorf("failed to locate docker compose file for container '%s': %v", containerName, err)
 	}
 	composePath := strings.TrimSpace(string(output))
@@ -38,13 +41,18 @@ func checkDockerRunState(composeFile string) (bool, error) {
 }
 
 // stop docker containers & collect image ids and digests
-func HandleDockerPreBackup(composeFilePath string) error {
-	logger.Logx.Infof("Handling docker pre-backup tasks")
-
+func HandleDockerPreBackup(composeFilePath, targetBaseName string) error {
+	logger.LogxWithFields("debug", fmt.Sprintf("Handling docker pre-backup tasks"), map[string]interface{}{
+		"package": "docker",
+		"target":  targetBaseName,
+	})
 	// checks whether docker is running
 	running, err := checkDockerRunState(composeFilePath)
 	if err != nil || !running {
-		logger.Logx.Warnf("No active Docker container at target location. Proceeding with backup.")
+		logger.LogxWithFields("warn", fmt.Sprintf("No active Docker container at %s. Proceeding with backup.", composeFilePath), map[string]interface{}{
+			"package": "docker",
+			"target":  targetBaseName,
+		})
 		// temporarily partially bring up container to gather image information
 		if err := sysutil.RunCommand("docker", "compose", "-f", composeFilePath, "up", "--no-start"); err != nil {
 			return fmt.Errorf("failed to partially bring up docker containers containers for image inspection: %v", err)
@@ -58,7 +66,10 @@ func HandleDockerPreBackup(composeFilePath string) error {
 	}
 
 	// shuts down docker container from composefile
-	logger.Logx.Debugf("Performing Docker compose jobs")
+	logger.LogxWithFields("debug", fmt.Sprintf("Performing Docker compose down jobs on %s", composeFilePath), map[string]interface{}{
+		"package": "docker",
+		"target":  targetBaseName,
+	})
 	if err := sysutil.RunCommand("docker", "compose", "-f", composeFilePath, "down"); err != nil {
 		return fmt.Errorf("failed to stop Docker containers: %v", err)
 	}
@@ -100,17 +111,26 @@ func writeDockerImages(composeFile string, outputFile string) error {
 		return fmt.Errorf("failed to write docker image version info to file: %v", err)
 	}
 
-	logger.Logx.Infof("Docker image IDs and digests saved to %s", outputFile)
+	logger.LogxWithFields("info", fmt.Sprintf("Docker service image IDs and digests saved to %s", outputFile), map[string]interface{}{
+		"package": "docker",
+		"target":  filepath.Base(filepath.Dir(composeFile)),
+	})
 	return nil
 }
 
 // handles docker container restart/turn-up commands
 func HandleDockerPostBackup(composeFilePath string, restartDockerBool bool) error {
 	if !restartDockerBool {
-		logger.Logx.Infof("Docker restart disabled, skipping restart . . .")
+		logger.LogxWithFields("info", fmt.Sprintf("Docker service restart disabled, skipping restart"), map[string]interface{}{
+			"package": "docker",
+			"target":  filepath.Base(filepath.Dir(composeFilePath)),
+		})
 		return nil
 	}
-	logger.Logx.Debugf("Restarting Docker compose")
+	logger.LogxWithFields("debug", fmt.Sprintf("Restarting Docker compose services via %s", composeFilePath), map[string]interface{}{
+		"package": "docker",
+		"target":  filepath.Base(filepath.Dir(composeFilePath)),
+	})
 	if err := startDockerContainer(composeFilePath); err != nil {
 		return fmt.Errorf("failed to restart Docker containers at : %s", composeFilePath)
 	}
@@ -119,13 +139,23 @@ func HandleDockerPostBackup(composeFilePath string, restartDockerBool bool) erro
 
 // starts docker container from yaml file
 func startDockerContainer(composefile string) error {
-	// Restart docker container
-	logger.Logx.Infof("Starting Docker container")
+	// restart docker container
+	logger.LogxWithFields("info", fmt.Sprintf("Starting Docker container as headless/daemon"), map[string]interface{}{
+		"package": "docker",
+		"target":  filepath.Base(filepath.Dir(composefile)),
+	})
 	err := sysutil.RunCommand("docker", "compose", "-f", composefile, "up", "-d")
 	if err != nil {
-		logger.Logx.Errorf("Error starting Docker container: %v", err)
+		logger.LogxWithFields("error", fmt.Sprintf("Error starting Docker container: %v", err), map[string]interface{}{
+			"package": "docker",
+			"target":  filepath.Base(filepath.Dir(composefile)),
+			"success": false,
+		})
 		return err
 	}
-	logger.Logx.Infof("Successful startup job on docker compose at %s", composefile)
+	logger.LogxWithFields("debug", fmt.Sprintf("Successful startup job on docker compose at %s", composefile), map[string]interface{}{
+		"package": "docker",
+		"target":  filepath.Base(filepath.Dir(composefile)),
+	})
 	return err
 }

@@ -105,7 +105,7 @@ func InterpretFlags(
 
 			// if either remote user or remote host are empty
 			if configFile.RemoteUser == "" || configFile.RemoteHost == "" {
-				logger.Logx.WithField("package", "config").Fatal("Default remote host and username must be set in config.yml in order to use -remote-send-defaults")
+				logger.Logx.WithField("package", "inputhandler").Fatal("Default remote host and username must be set in config.yml in order to use -remote-send-defaults")
 			}
 		}
 	} else {
@@ -119,6 +119,6 @@ func InterpretFlags(
 	// validate inputs
 	err := validateInput(targetDir, dockerName, remoteUser, remoteHost, remoteOutputDir, skipLocal, configFile)
 	if err != nil {
-		logger.Logx.Fatalf("Input errors: %v", err)
+		logger.Logx.WithField("package", "inputhandler").Fatalf("Input validation errors: %v", err)
 	}
 }

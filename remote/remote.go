@@ -27,7 +27,7 @@ func HandleRemoteTransfer(filePath, remoteUser, remoteHost, remoteOutputDir stri
 
 	if configFile.ICMPTest {
 		// test to ensure remote host is reachable via icmp
-		if err := nethandler.ICMPRemoteHost(remoteHost, remoteUser); err != nil {
+		if err := nethandler.ICMPRemoteHost(remoteHost); err != nil {
 			return fmt.Errorf("remote host is not responding to ICMP: %v", err)
 		}
 	}
@@ -80,8 +80,14 @@ func sendToRemote(passedRemotePath, passedRemoteUser, passedRemoteHost, backupFi
 		// fallback to configuration-defined path
 		remoteFilePath = fmt.Sprintf("~/%s", backupFileNameBase)
 	}
-
-	logger.Logx.Infof("Transferring to remote %s@%s:%s . . .", passedRemoteUser, passedRemoteHost, remoteFilePath)
+	logger.LogxWithFields("info", fmt.Sprintf("Transferring to remote %s@%s:%s", passedRemoteUser, passedRemoteHost, remoteFilePath), map[string]interface{}{
+		"package":         "remote",
+		"remote":          true,
+		"remote_host":     passedRemoteHost,
+		"remote_user":     passedRemoteUser,
+		"remove_filepath": remoteFilePath,
+		"target":          backupFileNameBase,
+	})
 
 	rsyncArgs := []string{
 		"-avz",
@@ -101,6 +107,14 @@ func sendToRemote(passedRemotePath, passedRemoteUser, passedRemoteHost, backupFi
 		return fmt.Errorf("rsync failed: %v", err)
 	}
 
-	logger.Logx.Infof("Compressed File Successfully Transferred to %s", passedRemoteHost)
+	logger.LogxWithFields("info", fmt.Sprintf("Snapshot file successfully transferred to %s", passedRemoteHost), map[string]interface{}{
+		"package":         "remote",
+		"remote":          true,
+		"remote_host":     passedRemoteHost,
+		"remote_user":     passedRemoteUser,
+		"remove_filepath": remoteFilePath,
+		"success":         true,
+		"target":          backupFileNameBase,
+	})
 	return nil
 }
