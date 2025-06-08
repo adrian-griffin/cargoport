@@ -28,7 +28,7 @@ type ConfigFile struct {
 	ICMPTest            bool   `yaml:"icmp_test"`
 	SSHTest             bool   `yaml:"ssh_test"`
 	LogLevel            string `yaml:"log_level"`
-	LogFormat           string `yaml:"log_type"`
+	LogFormat           string `yaml:"log_format"`
 }
 
 // system-wide config reference path
@@ -113,7 +113,7 @@ func LoadConfigFile(configFilePath string) (*ConfigFile, error) {
 		config.LogLevel = "info"
 	}
 
-	// validate log_type
+	// validate log_format
 	// warn if invalid, default to "text"
 	validLogFormats := map[string]bool{
 		"text": true,
@@ -323,7 +323,7 @@ log_level: info       # 'debug', 'info', 'warn', 'error', 'fatal'
 
 # defines .log output type depending on your taste
 # json works well if you use jq with it
-log_type: text        # 'json' or 'text'
+log_format: text        # 'json' or 'text'
 `, rootDir, rootDir, rootDir)
 
 	// Write default config file

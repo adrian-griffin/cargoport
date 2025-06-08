@@ -21,7 +21,7 @@ import (
 	"github.com/adrian-griffin/cargoport/sysutil"
 )
 
-const Version = "v0.92.8"
+const Version = "v0.92.24"
 const motd = "kind words cost nothing <3"
 
 func main() {
@@ -200,8 +200,18 @@ func main() {
 	timeBeginJob := time.Now()
 
 	// log & print job start
-	logger.Logx.WithField("version", Version).Info("New backup job added")
-	logger.Logx.WithField("target", filepath.Base(targetPath)).Infof("Beginning backup job via %s", targetPath)
+	logger.Logx.WithField("package", "spacer").Infof(" --------------------------------------------------- ")
+
+	logger.LogxWithFields("info", "New backup job added", map[string]interface{}{
+		"package": "main",
+		"target":  filepath.Base(targetPath),
+		"version": Version,
+	})
+
+	logger.LogxWithFields("info", fmt.Sprintf("Beginning backup job via %s", targetPath), map[string]interface{}{
+		"package": "main",
+		"target":  filepath.Base(targetPath),
+	})
 
 	// declare target base name for metrics and logging tracking
 	targetBaseName := filepath.Base(targetPath)
@@ -286,7 +296,7 @@ func main() {
 	jobDuration := time.Since(timeBeginJob)
 	executionSeconds := jobDuration.Seconds()
 
-	logger.LogxWithFields("info", fmt.Sprintf("Job success, execution duration: %.2fs", executionSeconds), map[string]interface{}{
+	logger.LogxWithFields("info", fmt.Sprintf("Job success, execution time: %.2fs", executionSeconds), map[string]interface{}{
 		"package":  "main",
 		"target":   filepath.Base(targetPath),
 		"duration": fmt.Sprintf("%.2fs", executionSeconds),

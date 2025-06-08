@@ -75,11 +75,10 @@ func InitLogging(cargoportBase, defaultLogLevelString, logFormat string) (logFil
 		})
 	} else {
 		Logx.SetFormatter(&logrus.TextFormatter{
-			//Logx.SetFormatter(&logrus.JSONFormatter{
-			FullTimestamp: true,
-			//PadLevelText:    true,
+			FullTimestamp:   true,
 			TimestampFormat: time.RFC3339,
 			ForceColors:     true,
+			//PadLevelText:    true,
 		})
 	}
 

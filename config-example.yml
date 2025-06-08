@@ -30,4 +30,4 @@ log_level: info       # 'debug', 'info', 'warn', 'error', 'fatal'
 
 # defines .log output type depending on taste
 # json works well if you use jq with it
-log_type: text        # 'json' or 'text'
+log_format: text        # 'json' or 'text'

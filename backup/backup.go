@@ -252,6 +252,12 @@ func CompressDirectory(targetDir, outputFile string) error {
 		"package": "backup",
 		"target":  filepath.Base(targetDir),
 	})
+
+	// basic info output
+	logger.LogxWithFields("info", "Successfully compressed target data", map[string]interface{}{
+		"package": "backup",
+		"target":  filepath.Base(targetDir),
+	})
 	return nil
 }
 
@@ -290,9 +296,16 @@ func ShellCompressDirectory(targetDir, outputFile string) error {
 	}
 
 	// print to cli & log to logfile regarding successful directory compression
-	logger.LogxWithFields("info", fmt.Sprintf("Contents of %s successfully compressed to %s", targetDir, outputFile), map[string]interface{}{
+	logger.LogxWithFields("debug", fmt.Sprintf("Contents of %s successfully compressed to %s", targetDir, outputFile), map[string]interface{}{
 		"package": "backup",
 		"target":  baseDir,
 	})
+
+	// basic info output
+	logger.LogxWithFields("info", "Successfully compressed target data", map[string]interface{}{
+		"package": "backup",
+		"target":  filepath.Base(targetDir),
+	})
+
 	return nil
 }

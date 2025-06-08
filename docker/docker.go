@@ -68,11 +68,18 @@ func HandleDockerPreBackup(composeFilePath, targetBaseName string) error {
 	// shuts down docker container from composefile
 	logger.LogxWithFields("debug", fmt.Sprintf("Performing Docker compose down jobs on %s", composeFilePath), map[string]interface{}{
 		"package": "docker",
-		"target":  targetBaseName,
+		"target":  filepath.Base(filepath.Dir(composeFilePath)),
 	})
 	if err := sysutil.RunCommand("docker", "compose", "-f", composeFilePath, "down"); err != nil {
 		return fmt.Errorf("failed to stop Docker containers: %v", err)
 	}
+
+	// notify pre-backup docker job status
+	logger.LogxWithFields("info", fmt.Sprintf("Pre-backup docker jobs handled successfully"), map[string]interface{}{
+		"package": "docker",
+		"target":  targetBaseName,
+		// add # of services as a tag perhaps?
+	})
 	return nil
 }
 
@@ -111,7 +118,7 @@ func writeDockerImages(composeFile string, outputFile string) error {
 		return fmt.Errorf("failed to write docker image version info to file: %v", err)
 	}
 
-	logger.LogxWithFields("info", fmt.Sprintf("Docker service image IDs and digests saved to %s", outputFile), map[string]interface{}{
+	logger.LogxWithFields("debug", fmt.Sprintf("Docker service image IDs and digests saved to %s", outputFile), map[string]interface{}{
 		"package": "docker",
 		"target":  filepath.Base(filepath.Dir(composeFile)),
 	})
@@ -140,7 +147,7 @@ func HandleDockerPostBackup(composeFilePath string, restartDockerBool bool) erro
 // starts docker container from yaml file
 func startDockerContainer(composefile string) error {
 	// restart docker container
-	logger.LogxWithFields("info", fmt.Sprintf("Starting Docker container as headless/daemon"), map[string]interface{}{
+	logger.LogxWithFields("debug", fmt.Sprintf("Starting Docker container at %s as headless/daemon", filepath.Dir(composefile)), map[string]interface{}{
 		"package": "docker",
 		"target":  filepath.Base(filepath.Dir(composefile)),
 	})
@@ -157,5 +164,12 @@ func startDockerContainer(composefile string) error {
 		"package": "docker",
 		"target":  filepath.Base(filepath.Dir(composefile)),
 	})
+
+	// if no errors, info alert of success
+	logger.LogxWithFields("info", "Post-backup docker jobs handled successfully", map[string]interface{}{
+		"package": "docker",
+		"target":  filepath.Base(filepath.Dir(composefile)),
+	})
+
 	return err
 }

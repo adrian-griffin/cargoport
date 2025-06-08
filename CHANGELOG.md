@@ -4,13 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [0.92.8] - 2025-6-7
+## [0.92.24] - 2025-6-7
+- Deployed & implement multiple fields for more effective structured logging for the project long term 
+- Implemented configfile variable for swapping between json & text logfile formats
+- Major debug/info log_level revisions
+
+## [0.92.11] - 2025-6-7
 - Introduced new structured logger functionality
 - Migrated all packages to using new log output
 - Initialized new logger.go package
 - Adding log output level variable to config
-- Deployed & implement multiple fields for more effective structured logging for the project long term 
-- Implemented configfile variable for swapping between json & text logfile formats
 
 ## [0.91.2] - 2025-6-7
 - Added 22/tcp socket connection timeouts to alleviate hang if remote host responds to ICMP but silently INPUT; REJECTs SSH traffic in its ACLs
