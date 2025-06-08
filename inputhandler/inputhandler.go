@@ -46,11 +46,6 @@ func validateInput(targetDir, dockerName, remoteUser, remoteHost, remoteOutputDi
 		}
 	}
 
-	// if remote output dir is set, ensure `remoteHost` or `remote-user` is provided (mutal check is validated above, easier logic lol)
-	if *remoteOutputDir != "" && (*remoteHost == "" || *remoteUser == "") {
-		return fmt.Errorf("when remote send input is supplied, a `-remote-host=<host>` is required! Supports IPv4, IPv6, and DNS resolution")
-	}
-
 	// validate `remoteHost` a valid IP address or hostname
 	if *remoteHost != "" {
 		if err := nethandler.ValidateIP(*remoteHost); err != nil {
@@ -78,32 +73,48 @@ func InterpretFlags(
 ) {
 	// validate or override flags with configfile values
 
-	// if skip_local_backups in configfile then set skipLocal to enabled
-	if configFile.SkipLocal {
-		*skipLocal = configFile.SkipLocal
+	// determine if job is intended to perform skip local
+	skipLocalBool := configFile.SkipLocal || *skipLocal
+	if skipLocalBool {
+		if *skipLocal == false {
+			*skipLocal = false
+		} else {
+			*skipLocal = true
+		}
 	}
 
-	// if remote output dir is empty, use configfile defaults
-	if *remoteOutputDir == "" {
-		*remoteOutputDir = configFile.RemoteOutputDir
-	}
+	// determine if job is intended to involve remote transfer
+	remoteTransferBool := *sendDefaults || *remoteHost != "" || *remoteUser != ""
+	if remoteTransferBool {
 
-	// if send default enabled
-	if *sendDefaults {
-		// & remote user is not empty
-		if configFile.RemoteUser != "" {
-			*remoteUser = configFile.RemoteUser
-		}
-		// & remote host is not empty
-		if configFile.RemoteHost != "" {
-			*remoteHost = configFile.RemoteHost
+		// if remote output dir is empty, use configfile defaults
+		if *remoteOutputDir == "" {
+			*remoteOutputDir = configFile.RemoteOutputDir
 		}
 
-		// if either remote user or remote host are empty
-		if configFile.RemoteUser == "" || configFile.RemoteHost == "" {
-			fmt.Printf("ERROR <config>: Default remote host and username must be set in the configuration file to use -remote-send-defaults.")
-			log.Fatalf("ERROR <config>: Default remote host and username must be set in the configuration file to use -remote-send-defaults.")
+		// if send default enabled
+		if *sendDefaults {
+			// & remote user is not empty
+			if configFile.RemoteUser != "" {
+				*remoteUser = configFile.RemoteUser
+			}
+			// & remote host is not empty
+			if configFile.RemoteHost != "" {
+				*remoteHost = configFile.RemoteHost
+			}
+
+			// if either remote user or remote host are empty
+			if configFile.RemoteUser == "" || configFile.RemoteHost == "" {
+				fmt.Printf("ERROR <config>: Default remote host and username must be set in the configuration file to use -remote-send-defaults.")
+				log.Fatalf("ERROR <config>: Default remote host and username must be set in the configuration file to use -remote-send-defaults.")
+			}
 		}
+	} else {
+		// set all remote values to empty
+		*remoteOutputDir = ""
+		*remoteHost = ""
+		*remoteUser = ""
+		*sendDefaults = false
 	}
 
 	// validate inputs
