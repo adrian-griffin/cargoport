@@ -69,12 +69,12 @@ func InitLogging(cargoportBase string, defaultLogLevelString string) (logFilePat
 
 	Logx.SetOutput((multiWriter))
 
-	//Logx.SetFormatter(&logrus.TextFormatter{
-	Logx.SetFormatter(&logrus.JSONFormatter{
-		//FullTimestamp:   true,
-		//PadLevelText:    true,
+	Logx.SetFormatter(&logrus.TextFormatter{
+		//Logx.SetFormatter(&logrus.JSONFormatter{
+		FullTimestamp:   true,
+		PadLevelText:    true,
 		TimestampFormat: time.RFC3339,
-		// ForceColors:      true,
+		ForceColors:     true,
 	})
 
 	Logx.SetLevel(logLevelStringSwitch(defaultLogLevelString))
