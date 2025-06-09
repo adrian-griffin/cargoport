@@ -19,6 +19,8 @@ type JobContext struct {
 	RootDir       string
 	Tag           string
 	RestartDocker bool
+	RemoteHost    string
+	RemoteUser    string
 }
 
 func GenerateJobID(context JobContext) string {

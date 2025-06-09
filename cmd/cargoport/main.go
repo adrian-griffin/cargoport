@@ -212,6 +212,8 @@ func main() {
 		RootDir:       cargoportLocal,
 		Tag:           *tagOutputString,
 		RestartDocker: *restartDockerBool,
+		RemoteHost:    string(*remoteHost),
+		RemoteUser:    string(*remoteUser),
 	}
 
 	// generate job ID & populate context
@@ -315,8 +317,8 @@ func main() {
 			logger.LogxWithFields("error", fmt.Sprintf("Failure to complete remote transfer: %v", err), map[string]interface{}{
 				"package":     "main",
 				"target":      jobCTX.Target,
-				"remote_host": remoteHost,
-				"remote_user": remoteUser,
+				"remote_host": jobCTX.RemoteHost,
+				"remote_user": jobCTX.RemoteUser,
 				"job_id":      jobCTX.JobID,
 				"remote":      jobCTX.Remote,
 			})
@@ -341,17 +343,7 @@ func main() {
 	// job completion banner & time calculation
 	jobDuration := time.Since(jobCTX.StartTime)
 	executionSeconds := jobDuration.Seconds()
-	//
-	logger.LogxWithFields("info", "New backup job added", map[string]interface{}{
-		"package": "main",
-		"target":  jobCTX.Target,
-		"remote":  jobCTX.Remote,
-		"docker":  jobCTX.Docker,
-		"job_id":  jobCTX.JobID,
-		//"tag":     jobCTX.Tag,
-		"version": Version,
-	})
-	//
+
 	logger.LogxWithFields("info", fmt.Sprintf("Job success, execution time: %.2fs", executionSeconds), map[string]interface{}{
 		"package":    "main",
 		"target":     jobCTX.Target,
