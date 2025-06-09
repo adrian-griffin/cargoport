@@ -305,18 +305,18 @@ func ShellCompressDirectory(context jobcontext.JobContext, targetDir, outputFile
 	if err != nil {
 		return fmt.Errorf("error gathering output file info: %v", err)
 	}
-	compressedSizeBytes := fileInfo.Size()
-	context.CompressedSizeMB = float64(compressedSizeBytes) / 1024.0 / 1024.0
+	context.CompressedSizeBytesInt = fileInfo.Size()
+	context.CompressedSizeMBString = fmt.Sprintf("%.2f MB", float64(context.CompressedSizeBytesInt)/1024.0/1024.0)
 
 	// print to cli & log to logfile regarding successful directory compression
-	logger.LogxWithFields("debug", fmt.Sprintf("Contents of %s successfully compressed to %s, output filesize %.2f", targetDir, outputFile, float64(context.CompressedSizeMB)/1024.0/1024.0), map[string]interface{}{
+	logger.LogxWithFields("debug", fmt.Sprintf("Contents of %s successfully compressed to %s, output filesize %s", targetDir, outputFile, context.CompressedSizeMBString), map[string]interface{}{
 		"package":    "backup",
 		"skip_local": context.SkipLocal,
 		"target":     context.Target,
 		"target_dir": context.TargetDir,
 		"job_id":     context.JobID,
 		"tag":        context.Tag,
-		"size":       context.CompressedSizeMB,
+		"size":       context.CompressedSizeMBString,
 		"remote":     context.Remote,
 		"docker":     context.Docker,
 	})
@@ -328,7 +328,7 @@ func ShellCompressDirectory(context jobcontext.JobContext, targetDir, outputFile
 		"target_dir": context.TargetDir,
 		"job_id":     context.JobID,
 		"tag":        context.Tag,
-		"size":       context.CompressedSizeMB,
+		"size":       context.CompressedSizeMBString,
 	})
 
 	return nil
