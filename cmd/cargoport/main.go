@@ -202,15 +202,16 @@ func main() {
 
 	// define job context based on determined information thus far in the job process
 	jobCTX := jobcontext.JobContext{
-		Target:    filepath.Base(targetPath),
-		Remote:    (*remoteHost != ""),
-		Docker:    dockerEnabled,
-		SkipLocal: *skipLocal,
-		JobID:     "empty_id",
-		StartTime: time.Now(), // begin timer now
-		TargetDir: targetPath,
-		RootDir:   cargoportLocal,
-		Tag:       *tagOutputString,
+		Target:        filepath.Base(targetPath),
+		Remote:        (*remoteHost != ""),
+		Docker:        dockerEnabled,
+		SkipLocal:     *skipLocal,
+		JobID:         "empty_id",
+		StartTime:     time.Now(), // begin timer now
+		TargetDir:     targetPath,
+		RootDir:       cargoportLocal,
+		Tag:           *tagOutputString,
+		RestartDocker: *restartDockerBool,
 	}
 
 	// generate job ID & populate context
@@ -223,20 +224,21 @@ func main() {
 		"remote":  jobCTX.Remote,
 		"docker":  jobCTX.Docker,
 		"job_id":  jobCTX.JobID,
-		"tag":     jobCTX.Tag,
+		//"tag":     jobCTX.Tag,
 		"version": Version,
 	})
 
 	logger.LogxWithFields("debug", fmt.Sprintf("Beginning backup job via %s", jobCTX.TargetDir), map[string]interface{}{
-		"package":    "main",
-		"target":     jobCTX.Target,
-		"remote":     jobCTX.Remote,
-		"docker":     jobCTX.Docker,
-		"skip_local": jobCTX.SkipLocal,
-		"target_dir": jobCTX.TargetDir,
-		"job_id":     jobCTX.JobID,
-		"tag":        jobCTX.Tag,
-		"version":    Version,
+		"package":        "main",
+		"target":         jobCTX.Target,
+		"remote":         jobCTX.Remote,
+		"docker":         jobCTX.Docker,
+		"skip_local":     jobCTX.SkipLocal,
+		"target_dir":     jobCTX.TargetDir,
+		"job_id":         jobCTX.JobID,
+		"tag":            jobCTX.Tag,
+		"restart_docker": jobCTX.RestartDocker,
+		"version":        Version,
 	})
 
 	// declare target base name for metrics and logging tracking
@@ -247,9 +249,11 @@ func main() {
 		if err := docker.HandleDockerPreBackup(composeFilePath, targetBaseName); err != nil {
 			logger.LogxWithFields("fatal", fmt.Sprintf("Failure to perform pre-snapshot docker tasks: %v", err), map[string]interface{}{
 				"package":    "main",
-				"target":     targetBaseName,
+				"target":     jobCTX.Target,
 				"output_dir": filepath.Dir(backupFilePath),
 				"target_dir": filepath.Dir(composeFilePath),
+				"job_id":     jobCTX.JobID,
+				"success":    false,
 			})
 		}
 	}
@@ -265,6 +269,7 @@ func main() {
 					"target":     filepath.Base(targetPath),
 					"output_dir": filepath.Dir(backupFilePath),
 					"target_dir": filepath.Dir(composeFilePath),
+					"job_id":     jobCTX.JobID,
 				})
 			}
 		}
@@ -273,6 +278,10 @@ func main() {
 			"package":    "main",
 			"target":     filepath.Base(targetPath),
 			"output_dir": filepath.Dir(backupFilePath),
+			"target_dir": filepath.Dir(targetPath),
+			"job_id":     jobCTX.JobID,
+			"docker":     jobCTX.Docker,
+			"success":    false,
 		})
 	}
 
@@ -283,9 +292,11 @@ func main() {
 			// if remote fail, then remove tempfile when skipLocal enabled
 			if *skipLocal {
 				sysutil.RemoveTempFile(backupFilePath)
-				logger.LogxWithFields("debug", fmt.Sprintf("Removing local tempfile"), map[string]interface{}{
-					"package": "main",
-					"target":  filepath.Base(filepath.Dir(backupFilePath)),
+				logger.LogxWithFields("debug", fmt.Sprintf("Removing local tempfile %s", backupFilePath), map[string]interface{}{
+					"package":    "main",
+					"target":     jobCTX.Target,
+					"job_id":     jobCTX.JobID,
+					"skip_local": jobCTX.SkipLocal,
 				})
 
 			}
@@ -293,14 +304,21 @@ func main() {
 			// if remote fail, then handle post-backup docker jobs
 			if dockerEnabled {
 				if err := docker.HandleDockerPostBackup(composeFilePath, *restartDockerBool); err != nil {
-					logger.Logx.Fatalf("Failure to reinitialize docker service after failed transfer: %v", err)
+					logger.LogxWithFields("fatal", fmt.Sprintf("Failure to reinitialize docker service after failed transfer: %v", err), map[string]interface{}{
+						"package":    "main",
+						"target":     jobCTX.Target,
+						"target_dir": filepath.Dir(composeFilePath),
+						"job_id":     jobCTX.JobID,
+					})
 				}
 			}
 			logger.LogxWithFields("error", fmt.Sprintf("Failure to complete remote transfer: %v", err), map[string]interface{}{
 				"package":     "main",
-				"target":      filepath.Base(filepath.Dir(backupFilePath)),
+				"target":      jobCTX.Target,
 				"remote_host": remoteHost,
 				"remote_user": remoteUser,
+				"job_id":      jobCTX.JobID,
+				"remote":      jobCTX.Remote,
 			})
 		}
 	}
@@ -312,8 +330,10 @@ func main() {
 	if dockerEnabled {
 		if err := docker.HandleDockerPostBackup(composeFilePath, *restartDockerBool); err != nil {
 			logger.LogxWithFields("error", fmt.Sprintf("Failure to restart docker service: %v", err), map[string]interface{}{
-				"package": "main",
-				"target":  filepath.Base(targetPath),
+				"package":    "main",
+				"target":     filepath.Base(targetPath),
+				"job_id":     jobCTX.JobID,
+				"target_dir": filepath.Dir(composeFilePath),
 			})
 		}
 	}
@@ -321,12 +341,26 @@ func main() {
 	// job completion banner & time calculation
 	jobDuration := time.Since(jobCTX.StartTime)
 	executionSeconds := jobDuration.Seconds()
-
+	//
+	logger.LogxWithFields("info", "New backup job added", map[string]interface{}{
+		"package": "main",
+		"target":  jobCTX.Target,
+		"remote":  jobCTX.Remote,
+		"docker":  jobCTX.Docker,
+		"job_id":  jobCTX.JobID,
+		//"tag":     jobCTX.Tag,
+		"version": Version,
+	})
+	//
 	logger.LogxWithFields("info", fmt.Sprintf("Job success, execution time: %.2fs", executionSeconds), map[string]interface{}{
-		"package":  "main",
-		"target":   filepath.Base(targetPath),
-		"duration": fmt.Sprintf("%.2fs", executionSeconds),
-		"success":  true,
+		"package":    "main",
+		"target":     jobCTX.Target,
+		"remote":     jobCTX.Remote,
+		"docker":     jobCTX.Docker,
+		"job_id":     jobCTX.JobID,
+		"skip_local": jobCTX.SkipLocal,
+		"duration":   fmt.Sprintf("%.2fs", executionSeconds),
+		"success":    true,
 	})
 	logger.Logx.WithField("package", "spacer").Infof(" --------------------------------------------------- ")
 }
