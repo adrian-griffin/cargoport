@@ -31,3 +31,7 @@ log_level: info       # 'debug', 'info', 'warn', 'error', 'fatal'
 # defines .log output type depending on taste
 # json works well if you use jq with it
 log_format: text        # 'json' or 'text'
+
+# if 'text' format, logs will utilize ANSI codes for colouring
+# great for readability, but makes casual log grepping harder without using looser matches
+log_text_format_colouring: false

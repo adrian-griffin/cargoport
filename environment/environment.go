@@ -29,6 +29,7 @@ type ConfigFile struct {
 	SSHTest             bool   `yaml:"ssh_test"`
 	LogLevel            string `yaml:"log_level"`
 	LogFormat           string `yaml:"log_format"`
+	LogTextColour       bool   `yaml:"log_text_format_colouring"`
 }
 
 // system-wide config reference path
@@ -166,7 +167,7 @@ func InitEnvironment(configFile ConfigFile) (string, string, string, string, str
 	}
 
 	// initialize logging
-	logFilePath := logger.InitLogging(cargoportBase, configFile.LogLevel, configFile.LogFormat)
+	logFilePath := logger.InitLogging(cargoportBase, configFile.LogLevel, configFile.LogFormat, configFile.LogTextColour)
 
 	return cargoportBase, cargoportLocal, cargoportRemote, logFilePath, cargoportKeys
 }
@@ -321,9 +322,13 @@ ssh_private_key_name: cargoport-id-ed25519
 # I'd recommend debug or info for most cases
 log_level: info       # 'debug', 'info', 'warn', 'error', 'fatal'
 
-# defines .log output type depending on your taste
+# defines .log output type depending on taste
 # json works well if you use jq with it
 log_format: text        # 'json' or 'text'
+
+# if 'text' format, logs will utilize ANSI codes for colouring
+# great for readability, but makes casual log grepping harder without using looser matches
+log_text_format_colouring: false
 `, rootDir, rootDir, rootDir)
 
 	// Write default config file

@@ -52,7 +52,7 @@ func LogxWithFields(levelString string, msg string, fields map[string]interface{
 	}
 }
 
-func InitLogging(cargoportBase, defaultLogLevelString, logFormat string) (logFilePath string) {
+func InitLogging(cargoportBase, defaultLogLevelString, logFormat string, logTextColour bool) (logFilePath string) {
 
 	logFilePath = filepath.Join(cargoportBase, "cargoport-main.log")
 	logFile, err := os.OpenFile(logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
@@ -77,8 +77,8 @@ func InitLogging(cargoportBase, defaultLogLevelString, logFormat string) (logFil
 		Logx.SetFormatter(&logrus.TextFormatter{
 			FullTimestamp:   true,
 			TimestampFormat: time.RFC3339,
-			ForceColors:     true,
-			//PadLevelText:    true,
+			ForceColors:     logTextColour,
+			PadLevelText:    true,
 		})
 	}
 
