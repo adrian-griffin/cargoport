@@ -319,11 +319,13 @@ func ShellCompressDirectory(context jobcontext.JobContext, targetDir, outputFile
 		"size":       context.CompressedSizeMBString,
 		"remote":     context.Remote,
 		"docker":     context.Docker,
+		"size_bytes": context.CompressedSizeBytesInt,
 	})
 
 	// basic info output
 	logger.LogxWithFields("info", "Successfully compressed target data", map[string]interface{}{
 		"package":    "backup",
+		"docker":     context.Docker,
 		"target":     context.Target,
 		"target_dir": context.TargetDir,
 		"job_id":     context.JobID,
