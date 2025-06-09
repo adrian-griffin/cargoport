@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/adrian-griffin/cargoport/jobcontext"
 	"github.com/sirupsen/logrus"
 )
 
@@ -31,6 +32,30 @@ func logLevelStringSwitch(logLevelString string) logrus.Level {
 	}
 }
 
+// horrific map merging function to merge package presets + additional fields for logging, saving on code repetition
+func MergeFields(presetFields map[string]interface{}, addOnFields map[string]interface{}) map[string]interface{} {
+	// make new field map equal to the length of both field maps combined
+	merged := make(map[string]interface{}, len(presetFields)+len(addOnFields))
+	// loop over range of presetFields &
+	for key, value := range presetFields {
+		merged[key] = value // create new key;value in merged
+	}
+	for key, value := range addOnFields {
+		merged[key] = value // create new key;value in merged
+	}
+	return merged
+}
+
+// core, minimum log fields for all structured logging
+func CoreLogFields(context *jobcontext.JobContext, pkg string) map[string]interface{} {
+	return map[string]interface{}{
+		"target":  context.Target,
+		"job_id":  context.JobID,
+		"package": pkg,
+	}
+}
+
+// log to both stdout & persistent output with dynamic map for fields
 func LogxWithFields(levelString string, msg string, fields map[string]interface{}) {
 	entry := Logx.WithFields(fields)
 

@@ -15,6 +15,17 @@ import (
 	"github.com/adrian-griffin/cargoport/sysutil"
 )
 
+// debug level logging output fields for backup package
+func backupLogBaseFields(context jobcontext.JobContext) map[string]interface{} {
+	coreFields := logger.CoreLogFields(&context, "backup")
+	fields := logger.MergeFields(coreFields, map[string]interface{}{
+		"skip_local": context.SkipLocal,
+		"target_dir": context.TargetDir,
+		"tag":        context.Tag,
+	})
+	return fields
+}
+
 // determines target dir for backup based on input user input
 func DetermineBackupTarget(targetDir, dockerName *string) (string, string, bool, error) {
 	var composeFilePath string
@@ -143,12 +154,14 @@ func ValidateBackupFilePath(backupFilePath string) error {
 }
 
 // compresses target directory into output file tarball usin Go
-func CompressDirectory(context jobcontext.JobContext, targetDir, outputFile string) error {
+func CompressDirectory(context *jobcontext.JobContext, targetDir, outputFile string) error {
+
+	// defining logging fields
+	verboseFields := backupLogBaseFields(*context)
+	// coreFields := logger.CoreLogFields(context, "backup")
+
 	// compress target directory
-	logger.LogxWithFields("debug", fmt.Sprintf("Compressing target directory %s to %s", targetDir, outputFile), map[string]interface{}{
-		"package": "backup",
-		"target":  filepath.Base(targetDir),
-	})
+	logger.LogxWithFields("debug", fmt.Sprintf("Compressing target directory %s to %s", targetDir, outputFile), verboseFields)
 
 	// ensure base dir is valid
 	fi, err := os.Stat(targetDir)
@@ -249,10 +262,7 @@ func CompressDirectory(context jobcontext.JobContext, targetDir, outputFile stri
 	}
 
 	// print to cli & log to logfile regarding successful directory compression
-	logger.LogxWithFields("debug", fmt.Sprintf("Contents of %s successfully compressed to %s", targetDir, outputFile), map[string]interface{}{
-		"package": "backup",
-		"target":  filepath.Base(targetDir),
-	})
+	logger.LogxWithFields("debug", fmt.Sprintf("Contents of %s successfully compressed to %s", targetDir, outputFile), verboseFields)
 
 	// basic info output
 	logger.LogxWithFields("info", "Successfully compressed target data", map[string]interface{}{
@@ -268,11 +278,13 @@ func CompressDirectory(context jobcontext.JobContext, targetDir, outputFile stri
 
 // shells out to cli to compresses target directory into output file tarball
 func ShellCompressDirectory(context *jobcontext.JobContext, targetDir, outputFile string) error {
+
+	// defining logging fields
+	verboseFields := backupLogBaseFields(*context)
+	// coreFields := logger.CoreLogFields(context, "backup")
+
 	// compress target directory
-	logger.LogxWithFields("debug", fmt.Sprintf("Compressing target directory %s to %s", targetDir, outputFile), map[string]interface{}{
-		"package": "backup",
-		"target":  filepath.Base(targetDir),
-	})
+	logger.LogxWithFields("debug", fmt.Sprintf("Compressing target directory %s to %s", targetDir, outputFile), verboseFields)
 
 	parentDir := filepath.Dir(targetDir)
 	baseDir := filepath.Base(targetDir)
@@ -309,18 +321,10 @@ func ShellCompressDirectory(context *jobcontext.JobContext, targetDir, outputFil
 	context.CompressedSizeMBString = fmt.Sprintf("%.2f MB", float64(context.CompressedSizeBytesInt)/1024.0/1024.0)
 
 	// print to cli & log to logfile regarding successful directory compression
-	logger.LogxWithFields("debug", fmt.Sprintf("Contents of %s successfully compressed to %s, output filesize %s", targetDir, outputFile, context.CompressedSizeMBString), map[string]interface{}{
-		"package":    "backup",
-		"skip_local": context.SkipLocal,
-		"target":     context.Target,
-		"target_dir": context.TargetDir,
-		"job_id":     context.JobID,
-		"tag":        context.Tag,
+	logger.LogxWithFields("debug", fmt.Sprintf("Contents of %s successfully compressed to %s, output filesize: %s", targetDir, outputFile, context.CompressedSizeMBString), logger.MergeFields(verboseFields, map[string]interface{}{
 		"size":       context.CompressedSizeMBString,
-		"remote":     context.Remote,
-		"docker":     context.Docker,
 		"size_bytes": context.CompressedSizeBytesInt,
-	})
+	}))
 
 	// basic info output
 	logger.LogxWithFields("info", "Successfully compressed target data", map[string]interface{}{

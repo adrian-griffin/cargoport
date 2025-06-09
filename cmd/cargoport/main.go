@@ -25,6 +25,34 @@ import (
 const Version = "v0.92.44"
 const motd = "kind words cost nothing <3"
 
+// debug level logging output fields for main package
+func mainLogDebugFields(context *jobcontext.JobContext) map[string]interface{} {
+	coreFields := logger.CoreLogFields(context, "main")
+	fields := logger.MergeFields(coreFields, map[string]interface{}{
+		"remote":         context.Remote,
+		"docker":         context.Docker,
+		"skip_local":     context.SkipLocal,
+		"target_dir":     context.TargetDir,
+		"tag":            context.Tag,
+		"restart_docker": context.RestartDocker,
+		"remote_host":    context.RemoteHost,
+		"remote_user":    context.RemoteUser,
+	})
+
+	return fields
+}
+
+// fatal level logging output fields for main package
+func mainLogFatalFields(context *jobcontext.JobContext) map[string]interface{} {
+	debugFields := mainLogDebugFields(context)
+	fields := logger.MergeFields(debugFields, map[string]interface{}{
+		"success": false,
+	})
+
+	return fields
+}
+
+// main loop
 func main() {
 
 	//<section>   PARSE FLAGS
@@ -179,8 +207,6 @@ func main() {
 		"package": "spacer",
 	})
 
-	//<section>   Begin Backups
-	//------------
 	// determine backup target
 	targetPath, composeFilePath, dockerEnabled, err := backup.DetermineBackupTarget(targetDir, dockerName)
 	if err != nil {
@@ -201,6 +227,8 @@ func main() {
 			"root_dir": cargoportLocal,
 		})
 	}
+
+	/// << BEGIN JOB LOGIC >> (need to create jobhandler package)
 
 	// define job context based on determined information thus far in the job process
 	jobCTX := jobcontext.JobContext{
@@ -224,6 +252,11 @@ func main() {
 	jobID := jobcontext.GenerateJobID(jobCTX)
 	jobCTX.JobID = jobID
 
+	// --------------------
+	coreFields := logger.CoreLogFields(&jobCTX, "main")
+	verboseFields := mainLogDebugFields(&jobCTX)
+	fatalFields := mainLogFatalFields(&jobCTX)
+
 	logger.LogxWithFields("info", "New backup job added", map[string]interface{}{
 		"package": "main",
 		"target":  jobCTX.Target,
@@ -234,18 +267,7 @@ func main() {
 		"version": Version,
 	})
 
-	logger.LogxWithFields("debug", fmt.Sprintf("Beginning backup job via %s", jobCTX.TargetDir), map[string]interface{}{
-		"package":        "main",
-		"target":         jobCTX.Target,
-		"remote":         jobCTX.Remote,
-		"docker":         jobCTX.Docker,
-		"skip_local":     jobCTX.SkipLocal,
-		"target_dir":     jobCTX.TargetDir,
-		"job_id":         jobCTX.JobID,
-		"tag":            jobCTX.Tag,
-		"restart_docker": jobCTX.RestartDocker,
-		"version":        Version,
-	})
+	logger.LogxWithFields("debug", fmt.Sprintf("Beginning backup job via %s", jobCTX.TargetDir), verboseFields)
 
 	// declare target base name for metrics and logging tracking
 	targetBaseName := filepath.Base(targetPath)
@@ -253,14 +275,7 @@ func main() {
 	// handle pre-backup docker tasks
 	if dockerEnabled {
 		if err := docker.HandleDockerPreBackup(&jobCTX, composeFilePath, targetBaseName); err != nil {
-			logger.LogxWithFields("fatal", fmt.Sprintf("Failure to perform pre-snapshot docker tasks: %v", err), map[string]interface{}{
-				"package":    "main",
-				"target":     jobCTX.Target,
-				"output_dir": filepath.Dir(backupFilePath),
-				"target_dir": filepath.Dir(composeFilePath),
-				"job_id":     jobCTX.JobID,
-				"success":    false,
-			})
+			logger.LogxWithFields("fatal", fmt.Sprintf("Failure to perform pre-snapshot docker tasks: %v", err), fatalFields)
 		}
 	}
 
@@ -270,25 +285,11 @@ func main() {
 		// if docker restart fails, log error
 		if dockerEnabled {
 			if dockererr := docker.HandleDockerPostBackup(&jobCTX, composeFilePath, *restartDockerBool); dockererr != nil {
-				logger.LogxWithFields("error", fmt.Sprintf("Failure to handle docker compose after backup: %v", dockererr), map[string]interface{}{
-					"package":    "main",
-					"target":     filepath.Base(targetPath),
-					"output_dir": filepath.Dir(backupFilePath),
-					"target_dir": filepath.Dir(composeFilePath),
-					"job_id":     jobCTX.JobID,
-				})
+				logger.LogxWithFields("error", fmt.Sprintf("Failure to handle docker compose after backup: %v", dockererr), coreFields)
 			}
 		}
 
-		logger.LogxWithFields("fatal", fmt.Sprintf("Failure to compress target: %v", err), map[string]interface{}{
-			"package":    "main",
-			"target":     filepath.Base(targetPath),
-			"output_dir": filepath.Dir(backupFilePath),
-			"target_dir": filepath.Dir(targetPath),
-			"job_id":     jobCTX.JobID,
-			"docker":     jobCTX.Docker,
-			"success":    false,
-		})
+		logger.LogxWithFields("fatal", fmt.Sprintf("Failure to compress target: %v", err), fatalFields)
 	}
 
 	// handle remote transfer
@@ -298,34 +299,17 @@ func main() {
 			// if remote fail, then remove tempfile when skipLocal enabled
 			if *skipLocal {
 				sysutil.RemoveTempFile(backupFilePath)
-				logger.LogxWithFields("debug", fmt.Sprintf("Removing local tempfile %s", backupFilePath), map[string]interface{}{
-					"package":    "main",
-					"target":     jobCTX.Target,
-					"job_id":     jobCTX.JobID,
-					"skip_local": jobCTX.SkipLocal,
-				})
+				logger.LogxWithFields("debug", fmt.Sprintf("Removing local tempfile %s", backupFilePath), verboseFields)
 
 			}
 
 			// if remote fail, then handle post-backup docker jobs
 			if dockerEnabled {
 				if err := docker.HandleDockerPostBackup(&jobCTX, composeFilePath, *restartDockerBool); err != nil {
-					logger.LogxWithFields("fatal", fmt.Sprintf("Failure to reinitialize docker service after failed transfer: %v", err), map[string]interface{}{
-						"package":    "main",
-						"target":     jobCTX.Target,
-						"target_dir": filepath.Dir(composeFilePath),
-						"job_id":     jobCTX.JobID,
-					})
+					logger.LogxWithFields("fatal", fmt.Sprintf("Failure to reinitialize docker service after failed transfer: %v", err), fatalFields)
 				}
 			}
-			logger.LogxWithFields("error", fmt.Sprintf("Failure to complete remote transfer: %v", err), map[string]interface{}{
-				"package":     "main",
-				"target":      jobCTX.Target,
-				"remote_host": jobCTX.RemoteHost,
-				"remote_user": jobCTX.RemoteUser,
-				"job_id":      jobCTX.JobID,
-				"remote":      jobCTX.Remote,
-			})
+			logger.LogxWithFields("error", fmt.Sprintf("Failure to complete remote transfer: %v", err), verboseFields)
 		}
 	}
 
@@ -335,12 +319,7 @@ func main() {
 	// handle docker post backup
 	if dockerEnabled {
 		if err := docker.HandleDockerPostBackup(&jobCTX, composeFilePath, *restartDockerBool); err != nil {
-			logger.LogxWithFields("error", fmt.Sprintf("Failure to restart docker service: %v", err), map[string]interface{}{
-				"package":    "main",
-				"target":     filepath.Base(targetPath),
-				"job_id":     jobCTX.JobID,
-				"target_dir": filepath.Dir(composeFilePath),
-			})
+			logger.LogxWithFields("error", fmt.Sprintf("Failure to restart docker service: %v", err), coreFields)
 		}
 	}
 
