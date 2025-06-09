@@ -294,11 +294,11 @@ func main() {
 
 	// handle remote transfer
 	if *remoteHost != "" {
-		err := remote.HandleRemoteTransfer(backupFilePath, *remoteUser, *remoteHost, *remoteOutputDir, *skipLocal, *configFile)
+		err := remote.HandleRemoteTransfer(&jobCTX, backupFilePath, *remoteUser, *remoteHost, *remoteOutputDir, *skipLocal, *configFile)
 		if err != nil {
 			// if remote fail, then remove tempfile when skipLocal enabled
 			if *skipLocal {
-				sysutil.RemoveTempFile(backupFilePath)
+				sysutil.RemoveTempFile(&jobCTX, backupFilePath)
 				logger.LogxWithFields("debug", fmt.Sprintf("Removing local tempfile %s", backupFilePath), verboseFields)
 
 			}

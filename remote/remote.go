@@ -7,11 +7,25 @@ import (
 	"strings"
 
 	"github.com/adrian-griffin/cargoport/environment"
+	"github.com/adrian-griffin/cargoport/jobcontext"
 	"github.com/adrian-griffin/cargoport/keytool"
 	"github.com/adrian-griffin/cargoport/logger"
 	"github.com/adrian-griffin/cargoport/nethandler"
 	"github.com/adrian-griffin/cargoport/sysutil"
 )
+
+// debug level logging output fields for remote package
+func remoteLogDebugFields(context *jobcontext.JobContext) map[string]interface{} {
+	coreFields := logger.CoreLogFields(context, "remote")
+	fields := logger.MergeFields(coreFields, map[string]interface{}{
+		"remote":      context.Remote,
+		"remote_user": context.RemoteUser,
+		"remote_host": context.RemoteHost,
+		"skip_local":  context.SkipLocal,
+		// "remote_filepath":
+	})
+	return fields
+}
 
 // validate remote target dir & space
 //func ValidateRemotePath(remoteUser, remoteHost, remoteOutputDir string)
@@ -20,7 +34,7 @@ import (
 // as well as logic for confirming enough space on remote for transfer
 
 // wrapper function for all remote-send functions
-func HandleRemoteTransfer(filePath, remoteUser, remoteHost, remoteOutputDir string, skipLocal bool, configFile environment.ConfigFile) error {
+func HandleRemoteTransfer(context *jobcontext.JobContext, filePath, remoteUser, remoteHost, remoteOutputDir string, skipLocal bool, configFile environment.ConfigFile) error {
 
 	// <here> need to add logic here to toggle off icmp & ssh tests/validations in configfile
 	cargoportKey := filepath.Join(configFile.SSHKeyDir, configFile.SSHKeyName)
@@ -34,27 +48,30 @@ func HandleRemoteTransfer(filePath, remoteUser, remoteHost, remoteOutputDir stri
 
 	if configFile.SSHTest {
 		// test ssh connectivity prior to attempting rsync
-		if err := nethandler.SSHTestRemoteHost(remoteHost, remoteUser, cargoportKey); err != nil {
+		if err := nethandler.SSHTestRemoteHost(context, remoteHost, remoteUser, cargoportKey); err != nil {
 			return fmt.Errorf("remote host is not responding to SSH: %v", err)
 		}
 	}
 
 	// proceed with remote transfer
-	err := sendToRemote(remoteOutputDir, remoteUser, remoteHost, filepath.Base(filePath), filePath, cargoportKey, configFile)
+	err := sendToRemote(context, remoteOutputDir, remoteUser, remoteHost, filepath.Base(filePath), filePath, cargoportKey, configFile)
 	if err != nil {
 		return fmt.Errorf("error performing remote transfer: %v", err)
 	}
 
 	// clean up local tempfile after transfer if skipLocal is enabled
 	if skipLocal {
-		sysutil.RemoveTempFile(filePath)
+		sysutil.RemoveTempFile(context, filePath)
 	}
 
 	return nil
 }
 
 // handle remote rsync transfer to defined node
-func sendToRemote(passedRemotePath, passedRemoteUser, passedRemoteHost, backupFileNameBase, targetFileToTransfer, cargoportKey string, configFile environment.ConfigFile) error {
+func sendToRemote(context *jobcontext.JobContext, passedRemotePath, passedRemoteUser, passedRemoteHost, backupFileNameBase, targetFileToTransfer, cargoportKey string, configFile environment.ConfigFile) error {
+
+	// defining logging fields
+	verboseFields := remoteLogDebugFields(context)
 
 	//<section>  VALIDATIONS
 	//---------
@@ -80,14 +97,9 @@ func sendToRemote(passedRemotePath, passedRemoteUser, passedRemoteHost, backupFi
 		// fallback to configuration-defined path
 		remoteFilePath = fmt.Sprintf("~/%s", backupFileNameBase)
 	}
-	logger.LogxWithFields("debug", fmt.Sprintf("Transferring to remote %s@%s:%s", passedRemoteUser, passedRemoteHost, remoteFilePath), map[string]interface{}{
-		"package":         "remote",
-		"remote":          true,
-		"remote_host":     passedRemoteHost,
-		"remote_user":     passedRemoteUser,
-		"remote_filepath": remoteFilePath,
-		"target":          backupFileNameBase,
-	})
+	logger.LogxWithFields("debug", fmt.Sprintf("Transferring to remote %s@%s:%s", passedRemoteUser, passedRemoteHost, remoteFilePath), logger.MergeFields(verboseFields, map[string]interface{}{
+		"remote_dir": filepath.Dir(remoteFilePath),
+	}))
 
 	rsyncArgs := []string{
 		"-avz",
@@ -108,13 +120,12 @@ func sendToRemote(passedRemotePath, passedRemoteUser, passedRemoteHost, backupFi
 	}
 
 	logger.LogxWithFields("info", "Snapshot successfully transferred to remote", map[string]interface{}{
-		"package":         "remote",
-		"remote":          true,
-		"remote_host":     passedRemoteHost,
-		"remote_user":     passedRemoteUser,
-		"remote_filepath": remoteFilePath,
-		"success":         true,
-		"target":          backupFileNameBase,
+		"package":     "remote",
+		"remote":      true,
+		"remote_host": passedRemoteHost,
+		"remote_user": passedRemoteUser,
+		"success":     true,
+		"target":      context.Target,
 	})
 	return nil
 }

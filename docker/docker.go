@@ -13,8 +13,8 @@ import (
 )
 
 // debug level logging output fields for docker package
-func dockerLogBaseFields(context jobcontext.JobContext) map[string]interface{} {
-	coreFields := logger.CoreLogFields(&context, "docker")
+func dockerLogBaseFields(context *jobcontext.JobContext) map[string]interface{} {
+	coreFields := logger.CoreLogFields(context, "docker")
 	fields := logger.MergeFields(coreFields, map[string]interface{}{
 		"docker":         context.Docker,
 		"restart_docker": context.RestartDocker,
@@ -57,7 +57,7 @@ func checkDockerRunState(composeFile string) (bool, error) {
 func HandleDockerPreBackup(context *jobcontext.JobContext, composeFilePath, targetBaseName string) error {
 
 	// defining logging fields
-	verboseFields := dockerLogBaseFields(*context)
+	verboseFields := dockerLogBaseFields(context)
 	coreFields := logger.CoreLogFields(context, "docker")
 
 	logger.LogxWithFields("debug", fmt.Sprintf("Handling docker pre-backup tasks"), verboseFields)
@@ -99,7 +99,7 @@ func HandleDockerPreBackup(context *jobcontext.JobContext, composeFilePath, targ
 func writeDockerImages(context *jobcontext.JobContext, composeFile string, outputFile string) error {
 
 	// defining logging fields
-	verboseFields := dockerLogBaseFields(*context)
+	verboseFields := dockerLogBaseFields(context)
 	// coreFields := logger.CoreLogFields(context, "docker")
 
 	cmd := exec.Command("docker", "compose", "-f", composeFile, "images", "--quiet")
@@ -141,7 +141,7 @@ func writeDockerImages(context *jobcontext.JobContext, composeFile string, outpu
 // handles docker container restart/turn-up commands
 func HandleDockerPostBackup(context *jobcontext.JobContext, composeFilePath string, restartDockerBool bool) error {
 
-	verboseFields := dockerLogBaseFields(*context)
+	verboseFields := dockerLogBaseFields(context)
 	// coreFields := logger.CoreLogFields(context, "docker")
 
 	if !restartDockerBool {
@@ -158,7 +158,7 @@ func HandleDockerPostBackup(context *jobcontext.JobContext, composeFilePath stri
 // starts docker container from yaml file
 func startDockerContainer(context *jobcontext.JobContext, composefile string) error {
 
-	verboseFields := dockerLogBaseFields(*context)
+	verboseFields := dockerLogBaseFields(context)
 	coreFields := logger.CoreLogFields(context, "docker")
 
 	// restart docker container
