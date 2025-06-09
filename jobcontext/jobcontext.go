@@ -24,5 +24,11 @@ type JobContext struct {
 }
 
 func GenerateJobID(context JobContext) string {
-	return context.Target + "-" + strings.Split(uuid.New().String(), "-")[0]
+	// gen new random UUID
+	u := uuid.New().String()
+	parts := strings.Split(u, "-")
+	q1 := parts[0] // initial 8-character sequence from UUID
+	q2 := parts[1] // 1st 4-character sequence from UUID
+
+	return q1 + q2
 }
