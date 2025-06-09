@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [0.92.44] - 2025-6-8
 - Added job contexts
 - Added jobIDs for easier job tracking
+- Added output filesize to structured logging
 
 ## [0.92.24] - 2025-6-8
 - Deployed & implement multiple fields for more effective structured logging for the project long term 

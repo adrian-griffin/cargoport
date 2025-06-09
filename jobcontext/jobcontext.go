@@ -9,18 +9,19 @@ import (
 
 // declaring job context struct
 type JobContext struct {
-	Target        string
-	Remote        bool
-	Docker        bool
-	SkipLocal     bool
-	JobID         string
-	StartTime     time.Time
-	TargetDir     string
-	RootDir       string
-	Tag           string
-	RestartDocker bool
-	RemoteHost    string
-	RemoteUser    string
+	Target           string
+	Remote           bool
+	Docker           bool
+	SkipLocal        bool
+	JobID            string
+	StartTime        time.Time
+	TargetDir        string
+	RootDir          string
+	Tag              string
+	RestartDocker    bool
+	RemoteHost       string
+	RemoteUser       string
+	CompressedSizeMB float64
 }
 
 func GenerateJobID(context JobContext) string {

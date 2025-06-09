@@ -202,18 +202,19 @@ func main() {
 
 	// define job context based on determined information thus far in the job process
 	jobCTX := jobcontext.JobContext{
-		Target:        filepath.Base(targetPath),
-		Remote:        (*remoteHost != ""),
-		Docker:        dockerEnabled,
-		SkipLocal:     *skipLocal,
-		JobID:         "empty_id",
-		StartTime:     time.Now(), // begin timer now
-		TargetDir:     targetPath,
-		RootDir:       cargoportLocal,
-		Tag:           *tagOutputString,
-		RestartDocker: *restartDockerBool,
-		RemoteHost:    string(*remoteHost),
-		RemoteUser:    string(*remoteUser),
+		Target:           filepath.Base(targetPath),
+		Remote:           (*remoteHost != ""),
+		Docker:           dockerEnabled,
+		SkipLocal:        *skipLocal,
+		JobID:            "empty_id",
+		StartTime:        time.Now(), // begin timer now
+		TargetDir:        targetPath,
+		RootDir:          cargoportLocal,
+		Tag:              *tagOutputString,
+		RestartDocker:    *restartDockerBool,
+		RemoteHost:       string(*remoteHost),
+		RemoteUser:       string(*remoteUser),
+		CompressedSizeMB: 0.00,
 	}
 
 	// generate job ID & populate context
@@ -345,14 +346,14 @@ func main() {
 	executionSeconds := jobDuration.Seconds()
 
 	logger.LogxWithFields("info", fmt.Sprintf("Job success, execution time: %.2fs", executionSeconds), map[string]interface{}{
-		"package":    "main",
-		"target":     jobCTX.Target,
-		"remote":     jobCTX.Remote,
-		"docker":     jobCTX.Docker,
-		"job_id":     jobCTX.JobID,
-		"skip_local": jobCTX.SkipLocal,
-		"duration":   fmt.Sprintf("%.2fs", executionSeconds),
-		"success":    true,
+		"package":  "main",
+		"target":   jobCTX.Target,
+		"remote":   jobCTX.Remote,
+		"docker":   jobCTX.Docker,
+		"job_id":   jobCTX.JobID,
+		"duration": fmt.Sprintf("%.2fs", executionSeconds),
+		"success":  true,
+		"size":     jobCTX.CompressedSizeMB,
 	})
 	logger.Logx.WithField("package", "spacer").Infof(" --------------------------------------------------- ")
 }

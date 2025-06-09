@@ -300,20 +300,35 @@ func ShellCompressDirectory(context jobcontext.JobContext, targetDir, outputFile
 		return fmt.Errorf("error compressing directory: %v", err)
 	}
 
-	// print to cli & log to logfile regarding successful directory compression
-	logger.LogxWithFields("debug", fmt.Sprintf("Contents of %s successfully compressed to %s", targetDir, outputFile), map[string]interface{}{
-		"package": "backup",
-		"target":  baseDir,
-	})
+	// get output file size and return to job context
+	fileInfo, err := os.Stat(outputFile)
+	if err != nil {
+		return fmt.Errorf("error gathering output file info: %v", err)
+	}
+	compressedSizeBytes := fileInfo.Size()
+	context.CompressedSizeMB = float64(compressedSizeBytes) / 1024.0 / 1024.0
 
-	// basic info output
-	logger.LogxWithFields("info", "Successfully compressed target data", map[string]interface{}{
+	// print to cli & log to logfile regarding successful directory compression
+	logger.LogxWithFields("debug", fmt.Sprintf("Contents of %s successfully compressed to %s, output filesize %.2f", targetDir, outputFile, float64(context.CompressedSizeMB)/1024.0/1024.0), map[string]interface{}{
 		"package":    "backup",
 		"skip_local": context.SkipLocal,
 		"target":     context.Target,
 		"target_dir": context.TargetDir,
 		"job_id":     context.JobID,
 		"tag":        context.Tag,
+		"size":       context.CompressedSizeMB,
+		"remote":     context.Remote,
+		"docker":     context.Docker,
+	})
+
+	// basic info output
+	logger.LogxWithFields("info", "Successfully compressed target data", map[string]interface{}{
+		"package":    "backup",
+		"target":     context.Target,
+		"target_dir": context.TargetDir,
+		"job_id":     context.JobID,
+		"tag":        context.Tag,
+		"size":       context.CompressedSizeMB,
 	})
 
 	return nil
