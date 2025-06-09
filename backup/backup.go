@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/adrian-griffin/cargoport/docker"
+	"github.com/adrian-griffin/cargoport/jobcontext"
 	"github.com/adrian-griffin/cargoport/logger"
 	"github.com/adrian-griffin/cargoport/sysutil"
 )
@@ -142,7 +143,7 @@ func ValidateBackupFilePath(backupFilePath string) error {
 }
 
 // compresses target directory into output file tarball usin Go
-func CompressDirectory(targetDir, outputFile string) error {
+func CompressDirectory(context jobcontext.JobContext, targetDir, outputFile string) error {
 	// compress target directory
 	logger.LogxWithFields("debug", fmt.Sprintf("Compressing target directory %s to %s", targetDir, outputFile), map[string]interface{}{
 		"package": "backup",
@@ -255,14 +256,18 @@ func CompressDirectory(targetDir, outputFile string) error {
 
 	// basic info output
 	logger.LogxWithFields("info", "Successfully compressed target data", map[string]interface{}{
-		"package": "backup",
-		"target":  filepath.Base(targetDir),
+		"package":    "backup",
+		"skip_local": context.SkipLocal,
+		"target":     context.Target,
+		"target_dir": context.TargetDir,
+		"job_id":     context.JobID,
+		"tag":        context.Tag,
 	})
 	return nil
 }
 
 // shells out to cli to compresses target directory into output file tarball
-func ShellCompressDirectory(targetDir, outputFile string) error {
+func ShellCompressDirectory(context jobcontext.JobContext, targetDir, outputFile string) error {
 	// compress target directory
 	logger.LogxWithFields("debug", fmt.Sprintf("Compressing target directory %s to %s", targetDir, outputFile), map[string]interface{}{
 		"package": "backup",
@@ -303,8 +308,12 @@ func ShellCompressDirectory(targetDir, outputFile string) error {
 
 	// basic info output
 	logger.LogxWithFields("info", "Successfully compressed target data", map[string]interface{}{
-		"package": "backup",
-		"target":  filepath.Base(targetDir),
+		"package":    "backup",
+		"skip_local": context.SkipLocal,
+		"target":     context.Target,
+		"target_dir": context.TargetDir,
+		"job_id":     context.JobID,
+		"tag":        context.Tag,
 	})
 
 	return nil

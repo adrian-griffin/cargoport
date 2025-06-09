@@ -147,19 +147,19 @@ func main() {
 	// validate permissions & integrity on private key
 	sshPrivateKeyPath := filepath.Join(configFile.SSHKeyDir, configFile.SSHKeyName)
 	if err := keytool.ValidateSSHPrivateKeyPerms(sshPrivateKeyPath); err != nil {
-		logger.Logx.Fatal("Unable to validate keypair, please check configfile or create a new pair")
+		logger.Logx.Error("Unable to validate keypair, please check configfile or create a new pair")
 		logger.Logx.Fatalf("Key validation error: %v", err)
 	}
 
-	// if both remote user and remote host are specified during copy command, then proceed
+	// if BOTH remote user and remote host are specified during copy command, then proceed
 	if *copySSHKeyBool {
 		if *remoteHost == "" || *remoteUser == "" {
 			logger.Logx.Fatal("Both remote host and user must be specified to copy SSH key")
 		}
-		//
+		// copy public key to remote machine
 		sshPrivKeypath := filepath.Join(configFile.SSHKeyDir, configFile.SSHKeyName)
 		if err := keytool.CopyPublicKey(sshPrivKeypath, *remoteUser, *remoteHost); err != nil {
-			logger.Logx.Fatalf("Failed to copy SSH public key: %v", err)
+			logger.Logx.Errorf("Failed to copy SSH public key: %v", err)
 		}
 		os.Exit(0)
 	}
@@ -248,7 +248,7 @@ func main() {
 
 	// handle pre-backup docker tasks
 	if dockerEnabled {
-		if err := docker.HandleDockerPreBackup(composeFilePath, targetBaseName); err != nil {
+		if err := docker.HandleDockerPreBackup(jobCTX, composeFilePath, targetBaseName); err != nil {
 			logger.LogxWithFields("fatal", fmt.Sprintf("Failure to perform pre-snapshot docker tasks: %v", err), map[string]interface{}{
 				"package":    "main",
 				"target":     jobCTX.Target,
@@ -261,11 +261,11 @@ func main() {
 	}
 
 	// attempt compression of data; if fail && dockerEnabled then attempt to handle docker restart
-	if err := backup.ShellCompressDirectory(targetPath, backupFilePath); err != nil {
+	if err := backup.ShellCompressDirectory(jobCTX, targetPath, backupFilePath); err != nil {
 
 		// if docker restart fails, log error
 		if dockerEnabled {
-			if dockererr := docker.HandleDockerPostBackup(composeFilePath, *restartDockerBool); dockererr != nil {
+			if dockererr := docker.HandleDockerPostBackup(jobCTX, composeFilePath, *restartDockerBool); dockererr != nil {
 				logger.LogxWithFields("error", fmt.Sprintf("Failure to handle docker compose after backup: %v", dockererr), map[string]interface{}{
 					"package":    "main",
 					"target":     filepath.Base(targetPath),
@@ -305,7 +305,7 @@ func main() {
 
 			// if remote fail, then handle post-backup docker jobs
 			if dockerEnabled {
-				if err := docker.HandleDockerPostBackup(composeFilePath, *restartDockerBool); err != nil {
+				if err := docker.HandleDockerPostBackup(jobCTX, composeFilePath, *restartDockerBool); err != nil {
 					logger.LogxWithFields("fatal", fmt.Sprintf("Failure to reinitialize docker service after failed transfer: %v", err), map[string]interface{}{
 						"package":    "main",
 						"target":     jobCTX.Target,
@@ -330,7 +330,7 @@ func main() {
 
 	// handle docker post backup
 	if dockerEnabled {
-		if err := docker.HandleDockerPostBackup(composeFilePath, *restartDockerBool); err != nil {
+		if err := docker.HandleDockerPostBackup(jobCTX, composeFilePath, *restartDockerBool); err != nil {
 			logger.LogxWithFields("error", fmt.Sprintf("Failure to restart docker service: %v", err), map[string]interface{}{
 				"package":    "main",
 				"target":     filepath.Base(targetPath),

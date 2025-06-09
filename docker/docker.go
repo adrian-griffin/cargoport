@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/adrian-griffin/cargoport/jobcontext"
 	"github.com/adrian-griffin/cargoport/logger"
 	"github.com/adrian-griffin/cargoport/sysutil"
 )
@@ -41,7 +42,7 @@ func checkDockerRunState(composeFile string) (bool, error) {
 }
 
 // stop docker containers & collect image ids and digests
-func HandleDockerPreBackup(composeFilePath, targetBaseName string) error {
+func HandleDockerPreBackup(context jobcontext.JobContext, composeFilePath, targetBaseName string) error {
 	logger.LogxWithFields("debug", fmt.Sprintf("Handling docker pre-backup tasks"), map[string]interface{}{
 		"package": "docker",
 		"target":  targetBaseName,
@@ -77,7 +78,10 @@ func HandleDockerPreBackup(composeFilePath, targetBaseName string) error {
 	// notify pre-backup docker job status
 	logger.LogxWithFields("info", fmt.Sprintf("Pre-backup docker jobs handled successfully"), map[string]interface{}{
 		"package": "docker",
-		"target":  targetBaseName,
+		"target":  context.Target,
+		"job_id":  context.JobID,
+		"remote":  context.Remote,
+		"docker":  context.Docker,
 		// add # of services as a tag perhaps?
 	})
 	return nil
@@ -126,11 +130,15 @@ func writeDockerImages(composeFile string, outputFile string) error {
 }
 
 // handles docker container restart/turn-up commands
-func HandleDockerPostBackup(composeFilePath string, restartDockerBool bool) error {
+func HandleDockerPostBackup(context jobcontext.JobContext, composeFilePath string, restartDockerBool bool) error {
 	if !restartDockerBool {
 		logger.LogxWithFields("info", fmt.Sprintf("Docker service restart disabled, skipping restart"), map[string]interface{}{
-			"package": "docker",
-			"target":  filepath.Base(filepath.Dir(composeFilePath)),
+			"package":        "docker",
+			"target":         context.Target,
+			"job_id":         context.JobID,
+			"remote":         context.Remote,
+			"docker":         context.Docker,
+			"restart_docker": context.RestartDocker,
 		})
 		return nil
 	}
@@ -138,14 +146,14 @@ func HandleDockerPostBackup(composeFilePath string, restartDockerBool bool) erro
 		"package": "docker",
 		"target":  filepath.Base(filepath.Dir(composeFilePath)),
 	})
-	if err := startDockerContainer(composeFilePath); err != nil {
+	if err := startDockerContainer(context, composeFilePath); err != nil {
 		return fmt.Errorf("failed to restart Docker containers at : %s", composeFilePath)
 	}
 	return nil
 }
 
 // starts docker container from yaml file
-func startDockerContainer(composefile string) error {
+func startDockerContainer(context jobcontext.JobContext, composefile string) error {
 	// restart docker container
 	logger.LogxWithFields("debug", fmt.Sprintf("Starting Docker container at %s as headless/daemon", filepath.Dir(composefile)), map[string]interface{}{
 		"package": "docker",
@@ -167,8 +175,12 @@ func startDockerContainer(composefile string) error {
 
 	// if no errors, info alert of success
 	logger.LogxWithFields("info", "Post-backup docker jobs handled successfully", map[string]interface{}{
-		"package": "docker",
-		"target":  filepath.Base(filepath.Dir(composefile)),
+		"package":        "docker",
+		"target":         context.Target,
+		"job_id":         context.JobID,
+		"remote":         context.Remote,
+		"docker":         context.Docker,
+		"restart_docker": context.RestartDocker,
 	})
 
 	return err
