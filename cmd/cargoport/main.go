@@ -175,7 +175,9 @@ func main() {
 	}
 
 	// log & print job start
-	logger.Logx.WithField("package", "spacer").Infof(" --------------------------------------------------- ")
+	logger.LogxWithFields("info", " --------------------------------------------------- ", map[string]interface{}{
+		"package": "spacer",
+	})
 
 	//<section>   Begin Backups
 	//------------
@@ -356,5 +358,8 @@ func main() {
 		"success":  true,
 		"size":     jobCTX.CompressedSizeMBString,
 	})
-	logger.Logx.WithField("package", "spacer").Infof(" --------------------------------------------------- ")
+	logger.LogxWithFields("info", " --------------------------------------------------- ", map[string]interface{}{
+		"package":    "spacer",
+		"end_job_id": jobCTX.JobID,
+	})
 }
