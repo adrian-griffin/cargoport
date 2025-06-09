@@ -252,7 +252,7 @@ func main() {
 
 	// handle pre-backup docker tasks
 	if dockerEnabled {
-		if err := docker.HandleDockerPreBackup(jobCTX, composeFilePath, targetBaseName); err != nil {
+		if err := docker.HandleDockerPreBackup(&jobCTX, composeFilePath, targetBaseName); err != nil {
 			logger.LogxWithFields("fatal", fmt.Sprintf("Failure to perform pre-snapshot docker tasks: %v", err), map[string]interface{}{
 				"package":    "main",
 				"target":     jobCTX.Target,
@@ -265,11 +265,11 @@ func main() {
 	}
 
 	// attempt compression of data; if fail && dockerEnabled then attempt to handle docker restart
-	if err := backup.ShellCompressDirectory(jobCTX, targetPath, backupFilePath); err != nil {
+	if err := backup.ShellCompressDirectory(&jobCTX, targetPath, backupFilePath); err != nil {
 
 		// if docker restart fails, log error
 		if dockerEnabled {
-			if dockererr := docker.HandleDockerPostBackup(jobCTX, composeFilePath, *restartDockerBool); dockererr != nil {
+			if dockererr := docker.HandleDockerPostBackup(&jobCTX, composeFilePath, *restartDockerBool); dockererr != nil {
 				logger.LogxWithFields("error", fmt.Sprintf("Failure to handle docker compose after backup: %v", dockererr), map[string]interface{}{
 					"package":    "main",
 					"target":     filepath.Base(targetPath),
@@ -309,7 +309,7 @@ func main() {
 
 			// if remote fail, then handle post-backup docker jobs
 			if dockerEnabled {
-				if err := docker.HandleDockerPostBackup(jobCTX, composeFilePath, *restartDockerBool); err != nil {
+				if err := docker.HandleDockerPostBackup(&jobCTX, composeFilePath, *restartDockerBool); err != nil {
 					logger.LogxWithFields("fatal", fmt.Sprintf("Failure to reinitialize docker service after failed transfer: %v", err), map[string]interface{}{
 						"package":    "main",
 						"target":     jobCTX.Target,
@@ -334,7 +334,7 @@ func main() {
 
 	// handle docker post backup
 	if dockerEnabled {
-		if err := docker.HandleDockerPostBackup(jobCTX, composeFilePath, *restartDockerBool); err != nil {
+		if err := docker.HandleDockerPostBackup(&jobCTX, composeFilePath, *restartDockerBool); err != nil {
 			logger.LogxWithFields("error", fmt.Sprintf("Failure to restart docker service: %v", err), map[string]interface{}{
 				"package":    "main",
 				"target":     filepath.Base(targetPath),

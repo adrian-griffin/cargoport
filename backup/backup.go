@@ -267,7 +267,7 @@ func CompressDirectory(context jobcontext.JobContext, targetDir, outputFile stri
 }
 
 // shells out to cli to compresses target directory into output file tarball
-func ShellCompressDirectory(context jobcontext.JobContext, targetDir, outputFile string) error {
+func ShellCompressDirectory(context *jobcontext.JobContext, targetDir, outputFile string) error {
 	// compress target directory
 	logger.LogxWithFields("debug", fmt.Sprintf("Compressing target directory %s to %s", targetDir, outputFile), map[string]interface{}{
 		"package": "backup",

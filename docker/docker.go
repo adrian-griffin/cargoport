@@ -42,7 +42,7 @@ func checkDockerRunState(composeFile string) (bool, error) {
 }
 
 // stop docker containers & collect image ids and digests
-func HandleDockerPreBackup(context jobcontext.JobContext, composeFilePath, targetBaseName string) error {
+func HandleDockerPreBackup(context *jobcontext.JobContext, composeFilePath, targetBaseName string) error {
 	logger.LogxWithFields("debug", fmt.Sprintf("Handling docker pre-backup tasks"), map[string]interface{}{
 		"package": "docker",
 		"target":  targetBaseName,
@@ -130,7 +130,7 @@ func writeDockerImages(composeFile string, outputFile string) error {
 }
 
 // handles docker container restart/turn-up commands
-func HandleDockerPostBackup(context jobcontext.JobContext, composeFilePath string, restartDockerBool bool) error {
+func HandleDockerPostBackup(context *jobcontext.JobContext, composeFilePath string, restartDockerBool bool) error {
 	if !restartDockerBool {
 		logger.LogxWithFields("info", fmt.Sprintf("Docker service restart disabled, skipping restart"), map[string]interface{}{
 			"package":        "docker",
@@ -153,7 +153,7 @@ func HandleDockerPostBackup(context jobcontext.JobContext, composeFilePath strin
 }
 
 // starts docker container from yaml file
-func startDockerContainer(context jobcontext.JobContext, composefile string) error {
+func startDockerContainer(context *jobcontext.JobContext, composefile string) error {
 	// restart docker container
 	logger.LogxWithFields("debug", fmt.Sprintf("Starting Docker container at %s as headless/daemon", filepath.Dir(composefile)), map[string]interface{}{
 		"package": "docker",
