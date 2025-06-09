@@ -207,7 +207,7 @@ func SetupTool() {
 	}
 	fmt.Printf("Using root dir: %s\n", rootDir)
 	fmt.Println(" ")
-	time.Sleep(1 * time.Second) // forced slowdowns for readability
+	time.Sleep(500 * time.Millisecond) // forced slowdowns for readability
 
 	// walk through temp configfile for setup & init
 	configFile := ConfigFile{
@@ -230,7 +230,7 @@ func SetupTool() {
 	fmt.Println(" ")
 	fmt.Println("------")
 	fmt.Println(" ")
-	time.Sleep(2 * time.Second)
+	time.Sleep(500 * time.Millisecond)
 
 	// check for existing config.yml
 	configFilePath := filepath.Join(cargoportBase, "config.yml")
@@ -266,7 +266,7 @@ func SetupTool() {
 		}
 	}
 	fmt.Println(" ")
-	time.Sleep(1 * time.Second)
+	time.Sleep(250 * time.Millisecond)
 
 	// create ssh key pair
 	sshKeyName := "cargoport-id-ed25519"
@@ -280,7 +280,7 @@ func SetupTool() {
 	}
 	fmt.Println("------")
 	fmt.Println(" ")
-	time.Sleep(500 * time.Millisecond)
+	time.Sleep(250 * time.Millisecond)
 
 	logger.LogxWithFields("info", fmt.Sprintf("Environment setup completed successfully!"), map[string]interface{}{
 		"package": "environment",
@@ -328,7 +328,7 @@ log_format: text        # 'json' or 'text'
 
 # if 'text' format, logs will utilize ANSI codes for colouring
 # great for readability, but makes casual log grepping harder without using looser matches
-log_text_format_colouring: false
+log_text_format_colouring: true
 `, rootDir, rootDir, rootDir)
 
 	// Write default config file

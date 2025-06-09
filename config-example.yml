@@ -34,4 +34,4 @@ log_format: text        # 'json' or 'text'
 
 # if 'text' format, logs will utilize ANSI codes for colouring
 # great for readability, but makes casual log grepping harder without using looser matches
-log_text_format_colouring: false
+log_text_format_colouring: true
