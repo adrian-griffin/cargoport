@@ -5,8 +5,6 @@ package main
 import (
 	"flag"
 	"fmt"
-
-	// "log"
 	"os"
 	"path/filepath"
 	"time"
@@ -22,7 +20,7 @@ import (
 	"github.com/adrian-griffin/cargoport/sysutil"
 )
 
-const Version = "v0.92.44"
+const Version = "v0.93.0"
 const motd = "kind words cost nothing <3"
 
 // debug level logging output fields for main package

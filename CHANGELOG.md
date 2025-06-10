@@ -4,9 +4,10 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [0.92.44] - 2025-6-8
+## [0.93.0] - 2025-6-9
+- Added structured logging
 - Added job contexts
-- Added jobIDs for easier job tracking
+- Added jobIDs for continous job tracking
 - Added output filesize to structured logging
 - Adding per package framework for varying log levels
 
