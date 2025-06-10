@@ -68,7 +68,7 @@ func SSHTestRemoteHost(context *jobcontext.JobContext, remoteHost, remoteUser, s
 	}
 
 	logger.LogxWithFields("debug", fmt.Sprintf("SSH connection test success, remote user: %s", remoteUser), logger.MergeFields(verboseFields, map[string]interface{}{
-		"success": false,
+		"success": true,
 	}))
 	return nil
 }

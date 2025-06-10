@@ -202,13 +202,34 @@ func main() {
 		})
 	}
 
+	// generate job ID & populate context
+	jobID := jobcontext.GenerateJobID()
+
+	jobCTX := jobcontext.JobContext{
+		Target:                 "",
+		Remote:                 (*remoteHost != ""),
+		Docker:                 false,
+		SkipLocal:              *skipLocal,
+		JobID:                  jobID,
+		StartTime:              time.Now(), // begin timer now
+		TargetDir:              "",
+		RootDir:                cargoportLocal,
+		Tag:                    *tagOutputString,
+		RestartDocker:          *restartDockerBool,
+		RemoteHost:             string(*remoteHost),
+		RemoteUser:             string(*remoteUser),
+		CompressedSizeBytesInt: 0,
+		CompressedSizeMBString: "0.0 MB",
+	}
+
 	// log & print job start
 	logger.LogxWithFields("info", " --------------------------------------------------- ", map[string]interface{}{
 		"package": "spacer",
+		"job_id":  jobCTX.JobID,
 	})
 
 	// determine backup target
-	targetPath, composeFilePath, dockerEnabled, err := backup.DetermineBackupTarget(targetDir, dockerName)
+	targetPath, composeFilePath, dockerEnabled, err := backup.DetermineBackupTarget(&jobCTX, targetDir, dockerName)
 	if err != nil {
 		logger.LogxWithFields("fatal", fmt.Sprintf("Failure to determine backup target: %v", err), map[string]interface{}{
 			"package": "main",
@@ -217,9 +238,12 @@ func main() {
 			"docker":  true,
 		})
 	}
+	jobCTX.Docker = dockerEnabled
+	jobCTX.Target = filepath.Base(targetPath)
+	jobCTX.TargetDir = targetPath
 
 	// prepare local backupfile & compose
-	backupFilePath, err := backup.PrepareBackupFilePath(cargoportLocal, targetPath, *localOutputDir, *tagOutputString, *skipLocal)
+	backupFilePath, err := backup.PrepareBackupFilePath(&jobCTX, cargoportLocal, targetPath, *localOutputDir, *tagOutputString, *skipLocal)
 	if err != nil {
 		logger.LogxWithFields("fatal", fmt.Sprintf("Failure to determine output path: %v", err), map[string]interface{}{
 			"package":  "main",
@@ -231,26 +255,6 @@ func main() {
 	/// << BEGIN JOB LOGIC >> (need to create jobhandler package)
 
 	// define job context based on determined information thus far in the job process
-	jobCTX := jobcontext.JobContext{
-		Target:                 filepath.Base(targetPath),
-		Remote:                 (*remoteHost != ""),
-		Docker:                 dockerEnabled,
-		SkipLocal:              *skipLocal,
-		JobID:                  "empty_id",
-		StartTime:              time.Now(), // begin timer now
-		TargetDir:              targetPath,
-		RootDir:                cargoportLocal,
-		Tag:                    *tagOutputString,
-		RestartDocker:          *restartDockerBool,
-		RemoteHost:             string(*remoteHost),
-		RemoteUser:             string(*remoteUser),
-		CompressedSizeBytesInt: 0,
-		CompressedSizeMBString: "0.0 MB",
-	}
-
-	// generate job ID & populate context
-	jobID := jobcontext.GenerateJobID(jobCTX)
-	jobCTX.JobID = jobID
 
 	// --------------------
 	coreFields := logger.CoreLogFields(&jobCTX, "main")

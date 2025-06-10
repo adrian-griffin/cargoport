@@ -126,6 +126,7 @@ func sendToRemote(context *jobcontext.JobContext, passedRemotePath, passedRemote
 		"remote_user": passedRemoteUser,
 		"success":     true,
 		"target":      context.Target,
+		"job_id":      context.JobID,
 	})
 	return nil
 }

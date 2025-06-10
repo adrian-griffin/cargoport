@@ -27,7 +27,7 @@ func backupLogBaseFields(context jobcontext.JobContext) map[string]interface{} {
 }
 
 // determines target dir for backup based on input user input
-func DetermineBackupTarget(targetDir, dockerName *string) (string, string, bool, error) {
+func DetermineBackupTarget(context *jobcontext.JobContext, targetDir, dockerName *string) (string, string, bool, error) {
 	var composeFilePath string
 	dockerEnabled := false
 
@@ -39,7 +39,7 @@ func DetermineBackupTarget(targetDir, dockerName *string) (string, string, bool,
 			logger.LogxWithFields("error", fmt.Sprintf("Compose file validation failure at %s", *targetDir), map[string]interface{}{
 				"package": "backup",
 				"target":  filepath.Base(*targetDir),
-				"success": false,
+				"job_id":  context.JobID,
 			})
 			return "", "", false, fmt.Errorf("failed to retrieve composefile path: %v", err)
 		}
@@ -53,7 +53,7 @@ func DetermineBackupTarget(targetDir, dockerName *string) (string, string, bool,
 			logger.LogxWithFields("error", fmt.Sprintf("Invalid target directory: %s", targetDirectory), map[string]interface{}{
 				"package": "backup",
 				"target":  filepath.Base(targetDirectory),
-				"success": false,
+				"job_id":  context.JobID,
 			})
 			return "", "", false, fmt.Errorf("failed to check target directory: %v", err)
 		}
@@ -65,6 +65,7 @@ func DetermineBackupTarget(targetDir, dockerName *string) (string, string, bool,
 			logger.LogxWithFields("debug", fmt.Sprintf("Compose file found in target dir at %s", filepath.Join(targetDirectory, "docker-compose.yml")), map[string]interface{}{
 				"package": "backup",
 				"target":  filepath.Base(targetDirectory),
+				"job_id":  context.JobID,
 			})
 			return targetDirectory, possibleComposeFile, true, nil
 		}
@@ -72,10 +73,12 @@ func DetermineBackupTarget(targetDir, dockerName *string) (string, string, bool,
 		logger.LogxWithFields("debug", fmt.Sprintf("Compose file not found in target dir at %s", filepath.Join(targetDirectory, "docker-compose.yml")), map[string]interface{}{
 			"package": "backup",
 			"target":  filepath.Base(targetDirectory),
+			"job_id":  context.JobID,
 		})
 		logger.LogxWithFields("debug", "Treating as regular dir backup and skipping docker jobs", map[string]interface{}{
 			"package": "backup",
 			"target":  filepath.Base(targetDirectory),
+			"job_id":  context.JobID,
 		})
 		return targetDirectory, "", false, nil
 	}
@@ -83,12 +86,18 @@ func DetermineBackupTarget(targetDir, dockerName *string) (string, string, bool,
 	logger.LogxWithFields("error", "Invalid -target-dir or -docker-name passed", map[string]interface{}{
 		"package": "backup",
 		"target":  filepath.Base(filepath.Dir(composeFilePath)),
+		"job_id":  context.JobID,
 	})
 	return "", "", dockerEnabled, fmt.Errorf("no valid target directory or Docker service specified")
 }
 
 // determines path for new backupfile based on user input
-func PrepareBackupFilePath(localBackupDir, targetDir, customOutputDir, tagOutputString string, skipLocal bool) (string, error) {
+func PrepareBackupFilePath(context *jobcontext.JobContext, localBackupDir, targetDir, customOutputDir, tagOutputString string, skipLocal bool) (string, error) {
+
+	// defining logging fields
+	verboseFields := backupLogBaseFields(*context)
+	// coreFields := logger.CoreLogFields(context, "backup")
+
 	// sanitize target directory suffix
 	targetDir = strings.TrimSuffix(targetDir, "/")
 	baseName := filepath.Base(targetDir)
@@ -105,12 +114,7 @@ func PrepareBackupFilePath(localBackupDir, targetDir, customOutputDir, tagOutput
 
 	// if baseName is empty, use backup name
 	if baseName == "" || baseName == "." || baseName == ".." {
-		logger.LogxWithFields("warn", fmt.Sprintf("Invalid target directory name '%s', saving backup as 'unnamed-backup.bak.tar.gz'", targetDir), map[string]interface{}{
-			"package":    "backup",
-			"target":     filepath.Base(baseName),
-			"output_dir": targetDir,
-			"tag":        tagOutputString,
-		})
+		logger.LogxWithFields("warn", fmt.Sprintf("Invalid target directory name '%s', saving backup as 'unnamed-backup.bak.tar.gz'", targetDir), verboseFields)
 		baseName = "unnamed-backup"
 	}
 

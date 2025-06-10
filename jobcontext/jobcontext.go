@@ -25,7 +25,7 @@ type JobContext struct {
 	CompressedSizeMBString string
 }
 
-func GenerateJobID(context JobContext) string {
+func GenerateJobID() string {
 	// gen new random UUID
 	u := uuid.New().String()
 	parts := strings.Split(u, "-")
