@@ -2,7 +2,7 @@
 
 A 🐳 Docker compose environment backup & transfer tool, written in Go!
 
-Built from the ground up for seamless use with `cron` on Debian servers & machines.
+Built from the ground up for seamless use with `cron` on Linux servers & machines.
 
 Allows easy transfer of backups to remote, off-prem machines, utilizing a built in SSH keytool for simple & hands-off backups on schedules.
 
@@ -67,6 +67,8 @@ If your setup uses external volume mounts located elsewhere on the system, or vo
 - For initial binary compilation, Go is needed
 - Rsync is needed on both the local node running cargoport, as well as the target machine you want to share backups with
 
+Cargoport has been tested on both latest Debian & Arch, and while it should work well on other distros, it has not been fully tested outside of these two, so please do use at your own caution. 
+
 #### go
 Cargoport should be compiled from raw source code, and as such Go will need to be installed on your machine to build cargoport into an executable binary. 
 
@@ -77,7 +79,7 @@ These instructions should get ya through it, but for more detailed instructions,
 ·> cd ~
 ·> mkdir go && mkdir go/builds/
 
-# This will download Go v1.22.5 for Debian machines running AMD64 architecture
+# This will download Go v1.22.5 for linux machines running AMD64 architecture
 # Please adjust as necessary
 ·> cd ~/go/builds/ && wget https://go.dev/dl/go1.22.5.linux-amd64.tar.gz
 
@@ -95,9 +97,13 @@ go version go1.22.5 linux/amd64
 ```
 
 #### rsync
-For remote sending, rsync is needed on both the local machine and the remote, debian-based instructions:
+For remote sending, rsync is needed on both the local machine and the remote:
 ```shell
-·> apt update && apt install rsync
+# debian-based distro
+·> sudo apt update && sudo apt install rsync
+
+# arch-based distro
+·> sudo pacman -Syu && sudo pacman -Sy rsync
 ```
 
 ### Set up CargoPort
