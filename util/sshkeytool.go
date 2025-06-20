@@ -1,4 +1,4 @@
-package keytool
+package util
 
 import (
 	"fmt"
@@ -21,7 +21,7 @@ func GenerateSSHKeypair(sshDir, keyName string) error {
 	// if the private key already exists, do not overwrite
 	if _, err := os.Stat(privateKeyPath); err == nil {
 		logger.LogxWithFields("warn", fmt.Sprintf("SSH Key '%s' already exists, skipping generation", privateKeyPath), map[string]interface{}{
-			"package":  "keytool",
+			"package":  "sshkeytool",
 			"action":   "generate_keypair",
 			"key_path": privateKeyPath,
 		})
@@ -69,7 +69,7 @@ func GenerateSSHKeypair(sshDir, keyName string) error {
 	}
 
 	logger.LogxWithFields("info", fmt.Sprintf("SSH key pair generated at: %s(.pub)", privateKeyPath), map[string]interface{}{
-		"package":  "keytool",
+		"package":  "sshkeytool",
 		"action":   "generate_keypair",
 		"key_path": privateKeyPath,
 	})
@@ -92,7 +92,7 @@ func CopyPublicKey(sshPrivKeypath, remoteUser, remoteHost string) error {
 	}
 
 	logger.LogxWithFields("info", fmt.Sprintf("Successfully installed local public key into %s@%s:~/.ssh/authorized_keys", remoteUser, remoteHost), logrus.Fields{
-		"package":     "keytool",
+		"package":     "sshkeytool",
 		"remote":      true,
 		"success":     true,
 		"action":      "copy_key",

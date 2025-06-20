@@ -1,4 +1,4 @@
-package environment
+package input
 
 import (
 	"fmt"
@@ -8,126 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"gopkg.in/yaml.v3"
-
-	"github.com/adrian-griffin/cargoport/keytool"
 	"github.com/adrian-griffin/cargoport/logger"
-	"github.com/adrian-griffin/cargoport/nethandler"
-	"github.com/adrian-griffin/cargoport/sysutil"
+	"github.com/adrian-griffin/cargoport/util"
 )
-
-type ConfigFile struct {
-	DefaultCargoportDir string `yaml:"default_cargoport_directory"`
-	SkipLocal           bool   `yaml:"skip_local_backups"`
-	RemoteUser          string `yaml:"default_remote_user"`
-	RemoteHost          string `yaml:"default_remote_host"`
-	RemoteOutputDir     string `yaml:"default_remote_output_dir"`
-	Version             string `yaml:"version,omitempty"`
-	SSHKeyDir           string `yaml:"ssh_key_directory"`
-	SSHKeyName          string `yaml:"ssh_private_key_name"`
-	ICMPTest            bool   `yaml:"icmp_test"`
-	SSHTest             bool   `yaml:"ssh_test"`
-	LogLevel            string `yaml:"log_level"`
-	LogFormat           string `yaml:"log_format"`
-	LogTextColour       bool   `yaml:"log_text_format_colouring"`
-}
-
-// system-wide config reference path
-const ConfigFilePointer = "/etc/cargoport.conf"
-
-// determines true configfile path
-func GetConfigFilePath() (string, error) {
-	// opens configfile pointer file to reference path to yamlfile
-	pointerFileData, err := os.ReadFile(ConfigFilePointer)
-	if err != nil {
-		return "", fmt.Errorf("could not read %s: %v", ConfigFilePointer, err)
-	}
-	// strings data from pointerfile and gathers path location
-	trueConfigPath := strings.TrimSpace(string(pointerFileData))
-	if _, err := os.Stat(trueConfigPath); os.IsNotExist(err) {
-		return "", fmt.Errorf("config file in path %s does not exist", trueConfigPath)
-	}
-	return trueConfigPath, nil
-}
-
-// parse config file
-func LoadConfigFile(configFilePath string) (*ConfigFile, error) {
-	// read config data from config file
-	configFileData, err := os.ReadFile(configFilePath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read config file: %w", err)
-	}
-
-	// unmarshal yaml into configfile var
-	var config ConfigFile
-	if err := yaml.Unmarshal(configFileData, &config); err != nil {
-		return nil, fmt.Errorf("failed to parse YAML config: %w", err)
-	}
-
-	//> CFG FILE VALIDATIONS
-	// validate that default_cargoport_directory is defined & valid
-	if config.DefaultCargoportDir == "" {
-		return nil, fmt.Errorf("missing required config: default_cargoport_directory")
-	}
-	if err := sysutil.ValidateDirectoryString(config.DefaultCargoportDir); err != nil {
-		return nil, fmt.Errorf("invalid required config: default_cargoport_directory: %v", err)
-	}
-
-	// validate that SSH keydir is not empty, is valid, and writeable
-	if config.SSHKeyDir == "" {
-		return nil, fmt.Errorf("missing required config: ssh_key_directory")
-	}
-	if err := sysutil.ValidateDirectoryWriteable(config.SSHKeyDir); err != nil {
-		return nil, fmt.Errorf("invalid required config: ssh_key_directory: %v", err)
-	}
-
-	// validate that SSH key name is not empty
-	if config.SSHKeyName == "" {
-		return nil, fmt.Errorf("missing required config: ssh_private_key_name")
-	}
-
-	// if remote host not empy, validate that remote host is a valid IP address or DNS name
-	if config.RemoteHost != "" {
-		if err := nethandler.ValidateIP(config.RemoteHost); err != nil {
-			return nil, fmt.Errorf("invalid required config: default_remote_host: %v", err)
-		}
-	}
-
-	// error if empty default_remote_user
-	if config.RemoteUser == "" {
-		fmt.Errorf("invalid `default_remote_user` in configfile")
-	}
-
-	// validate log_level
-	// warn if invalid, default to "info"
-	validLogLevels := map[string]bool{
-		"debug": true,
-		"info":  true,
-		"warn":  true,
-		"error": true,
-		"fatal": true,
-	}
-
-	// walk map, if no keys match valid log levels then warn & set config.LogLevel to `info`
-	if !validLogLevels[config.LogLevel] {
-		log.Printf("invalid `log_level` supplied, defaulting to `info`")
-		config.LogLevel = "info"
-	}
-
-	// validate log_format
-	// warn if invalid, default to "text"
-	validLogFormats := map[string]bool{
-		"text": true,
-		"json": true,
-	}
-	// walk map, if no keys match valid log formats then warn & set config.LogFormat to `text`
-	if !validLogFormats[config.LogFormat] {
-		log.Printf("invalid `log_format` supplied, defaulting to `text`")
-		config.LogFormat = "text"
-	}
-
-	return &config, nil
-}
 
 // sets up cargoport parent dirs & logging
 func InitEnvironment(configFile ConfigFile) (string, string, string, string, string) {
@@ -161,7 +44,7 @@ func InitEnvironment(configFile ConfigFile) (string, string, string, string, str
 	}
 
 	// set 777 on /var/cargoport/remote for all users to access
-	err = sysutil.RunCommand("chmod", "-R", "777", cargoportRemote)
+	err = util.RunCommand("chmod", "-R", "777", cargoportRemote)
 	if err != nil {
 		log.Fatalf("ERR: Error setting %s permissions for remotewrite: %v", cargoportRemote, err)
 	}
@@ -224,7 +107,7 @@ func SetupTool() {
 	fmt.Printf("Root directory initialized at: %s\n", cargoportBase)
 	fmt.Printf("Local backup directory: %s\n", cargoportLocal)
 	fmt.Printf("Remote backup directory: %s\n", cargoportRemote)
-	fmt.Printf("Keytool storage: %s\n", cargoportKeys)
+	fmt.Printf("util storage: %s\n", cargoportKeys)
 	fmt.Printf("Log file initialized at: %s\n", logFilePath)
 
 	fmt.Println(" ")
@@ -270,8 +153,8 @@ func SetupTool() {
 
 	// create ssh key pair
 	sshKeyName := "cargoport-id-ed25519"
-	if err := keytool.GenerateSSHKeypair(cargoportKeys, sshKeyName); err != nil {
-		log.Fatalf("ERROR <keytool>: Failed to generate SSH key: %v", err)
+	if err := util.GenerateSSHKeypair(cargoportKeys, sshKeyName); err != nil {
+		log.Fatalf("ERROR <util>: Failed to generate SSH key: %v", err)
 	}
 
 	// save true config at /etc/ reference
@@ -282,7 +165,7 @@ func SetupTool() {
 	fmt.Println(" ")
 	time.Sleep(250 * time.Millisecond)
 
-	logger.LogxWithFields("info", fmt.Sprintf("Environment setup completed successfully!"), map[string]interface{}{
+	logger.LogxWithFields("info", "Environment setup completed successfully!", map[string]interface{}{
 		"package": "environment",
 		"success": true,
 	})
@@ -314,7 +197,7 @@ default_remote_output_dir: %s/remote
 icmp_test: true
 ssh_test: false
 
-# [ KEYTOOL DEFAULTS ]
+# [ util DEFAULTS ]
 ssh_key_directory: %s/keys
 ssh_private_key_name: cargoport-id-ed25519
 
@@ -333,9 +216,4 @@ log_text_format_colouring: true
 
 	// Write default config file
 	return os.WriteFile(configFilePath, []byte(defaultConfig), 0644)
-}
-
-// handles writes between true configfile at /etc/ an configfile reference in declared parent dir
-func saveTrueConfigReference(configFilePath string) error {
-	return os.WriteFile(ConfigFilePointer, []byte(configFilePath), 0644)
 }

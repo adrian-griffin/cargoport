@@ -6,12 +6,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/adrian-griffin/cargoport/environment"
+	"github.com/adrian-griffin/cargoport/input"
 	"github.com/adrian-griffin/cargoport/jobcontext"
-	"github.com/adrian-griffin/cargoport/keytool"
 	"github.com/adrian-griffin/cargoport/logger"
-	"github.com/adrian-griffin/cargoport/nethandler"
-	"github.com/adrian-griffin/cargoport/sysutil"
+	"github.com/adrian-griffin/cargoport/util"
 )
 
 // debug level logging output fields for remote package
@@ -34,44 +32,44 @@ func remoteLogDebugFields(context *jobcontext.JobContext) map[string]interface{}
 // as well as logic for confirming enough space on remote for transfer
 
 // wrapper function for all remote-send functions
-func HandleRemoteTransfer(context *jobcontext.JobContext, filePath, remoteUser, remoteHost, remoteOutputDir string, skipLocal bool, configFile environment.ConfigFile) error {
+func HandleRemoteTransfer(jobctx *jobcontext.JobContext, filePath string, inputctx *input.InputContext) error {
 
 	// <here> need to add logic here to toggle off icmp & ssh tests/validations in configfile
-	cargoportKey := filepath.Join(configFile.SSHKeyDir, configFile.SSHKeyName)
+	cargoportKey := filepath.Join(inputctx.Config.SSHKeyDir, inputctx.Config.SSHKeyName)
 
-	if configFile.ICMPTest {
+	if inputctx.Config.ICMPTest {
 		// test to ensure remote host is reachable via icmp
-		if err := nethandler.ICMPRemoteHost(remoteHost); err != nil {
+		if err := util.ICMPRemoteHost(inputctx.RemoteHost); err != nil {
 			return fmt.Errorf("remote host is not responding to ICMP: %v", err)
 		}
 	}
 
-	if configFile.SSHTest {
+	if inputctx.Config.SSHTest {
 		// test ssh connectivity prior to attempting rsync
-		if err := nethandler.SSHTestRemoteHost(context, remoteHost, remoteUser, cargoportKey); err != nil {
-			return fmt.Errorf("remote host is not responding to SSH: %v", err)
+		if err := util.SSHTestRemoteHost(jobctx, inputctx.RemoteHost, inputctx.RemoteUser, cargoportKey); err != nil {
+			return fmt.Errorf("remote host is not responding to SSH: %s", inputctx.RemoteHost)
 		}
 	}
 
 	// proceed with remote transfer
-	err := sendToRemote(context, remoteOutputDir, remoteUser, remoteHost, filepath.Base(filePath), filePath, cargoportKey, configFile)
+	err := sendToRemote(jobctx, inputctx.RemoteOutputDir, inputctx.RemoteUser, inputctx.RemoteHost, filepath.Base(filePath), filePath, cargoportKey, *inputctx.Config)
 	if err != nil {
 		return fmt.Errorf("error performing remote transfer: %v", err)
 	}
 
 	// clean up local tempfile after transfer if skipLocal is enabled
-	if skipLocal {
-		sysutil.RemoveTempFile(context, filePath)
+	if jobctx.SkipLocal {
+		util.RemoveTempFile(jobctx, filePath)
 	}
 
 	return nil
 }
 
 // handle remote rsync transfer to defined node
-func sendToRemote(context *jobcontext.JobContext, passedRemotePath, passedRemoteUser, passedRemoteHost, backupFileNameBase, targetFileToTransfer, cargoportKey string, configFile environment.ConfigFile) error {
+func sendToRemote(jobctx *jobcontext.JobContext, passedRemotePath, passedRemoteUser, passedRemoteHost, backupFileNameBase, targetFileToTransfer, cargoportKey string, configFile input.ConfigFile) error {
 
 	// defining logging fields
-	verboseFields := remoteLogDebugFields(context)
+	verboseFields := remoteLogDebugFields(jobctx)
 
 	//<section>  VALIDATIONS
 	//---------
@@ -110,12 +108,12 @@ func sendToRemote(context *jobcontext.JobContext, passedRemotePath, passedRemote
 	}
 
 	// validate ssh private key integrity
-	if err := keytool.ValidateSSHPrivateKeyPerms(cargoportKey); err != nil {
+	if err := util.ValidateSSHPrivateKeyPerms(cargoportKey); err != nil {
 		return fmt.Errorf("private SSH key integrity check failed, key may have been tampered with, please generate a new keypair")
 	}
 
 	// run rsync
-	if err := sysutil.RunCommand("rsync", rsyncArgs...); err != nil {
+	if err := util.RunCommand("rsync", rsyncArgs...); err != nil {
 		return fmt.Errorf("rsync failed: %v", err)
 	}
 
@@ -125,8 +123,8 @@ func sendToRemote(context *jobcontext.JobContext, passedRemotePath, passedRemote
 		"remote_host": passedRemoteHost,
 		"remote_user": passedRemoteUser,
 		"success":     true,
-		"target":      context.Target,
-		"job_id":      context.JobID,
+		"target":      jobctx.Target,
+		"job_id":      jobctx.JobID,
 	})
 	return nil
 }

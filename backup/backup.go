@@ -10,9 +10,10 @@ import (
 	"strings"
 
 	"github.com/adrian-griffin/cargoport/docker"
+	"github.com/adrian-griffin/cargoport/input"
 	"github.com/adrian-griffin/cargoport/jobcontext"
 	"github.com/adrian-griffin/cargoport/logger"
-	"github.com/adrian-griffin/cargoport/sysutil"
+	"github.com/adrian-griffin/cargoport/util"
 )
 
 // debug level logging output fields for backup package
@@ -27,19 +28,19 @@ func backupLogBaseFields(context jobcontext.JobContext) map[string]interface{} {
 }
 
 // determines target dir for backup based on input user input
-func DetermineBackupTarget(context *jobcontext.JobContext, targetDir, dockerName *string) (string, string, bool, error) {
+func DetermineBackupTarget(jobctx *jobcontext.JobContext, inputcxt *input.InputContext) (string, string, bool, error) {
 	var composeFilePath string
 	dockerEnabled := false
 
 	// validates composefile, returns its path and dirpath, and enables dockerMode
-	if *dockerName != "" {
+	if inputcxt.DockerName != "" {
 		var err error
-		composeFilePath, err = docker.FindComposeFile(*dockerName, filepath.Base(*targetDir))
+		composeFilePath, err = docker.FindComposeFile(inputcxt.DockerName, filepath.Base(inputcxt.TargetDir))
 		if err != nil {
-			logger.LogxWithFields("error", fmt.Sprintf("Compose file validation failure at %s", *targetDir), map[string]interface{}{
+			logger.LogxWithFields("error", fmt.Sprintf("Compose file validation failure at %s", inputcxt.TargetDir), map[string]interface{}{
 				"package": "backup",
-				"target":  filepath.Base(*targetDir),
-				"job_id":  context.JobID,
+				"target":  filepath.Base(inputcxt.TargetDir),
+				"job_id":  jobctx.JobID,
 			})
 			return "", "", false, fmt.Errorf("failed to retrieve composefile path: %v", err)
 		}
@@ -47,13 +48,13 @@ func DetermineBackupTarget(context *jobcontext.JobContext, targetDir, dockerName
 		return filepath.Dir(composeFilePath), composeFilePath, true, nil
 	}
 	// validates target dir and returns it, keeps dockerMode disabled
-	if *targetDir != "" {
-		targetDirectory := strings.TrimSuffix(*targetDir, "/")
+	if inputcxt.TargetDir != "" {
+		targetDirectory := strings.TrimSuffix(inputcxt.TargetDir, "/")
 		if stat, err := os.Stat(targetDirectory); err != nil || !stat.IsDir() {
 			logger.LogxWithFields("error", fmt.Sprintf("Invalid target directory: %s", targetDirectory), map[string]interface{}{
 				"package": "backup",
 				"target":  filepath.Base(targetDirectory),
-				"job_id":  context.JobID,
+				"job_id":  jobctx.JobID,
 			})
 			return "", "", false, fmt.Errorf("failed to check target directory: %v", err)
 		}
@@ -65,7 +66,7 @@ func DetermineBackupTarget(context *jobcontext.JobContext, targetDir, dockerName
 			logger.LogxWithFields("debug", fmt.Sprintf("Compose file found in target dir at %s", filepath.Join(targetDirectory, "docker-compose.yml")), map[string]interface{}{
 				"package": "backup",
 				"target":  filepath.Base(targetDirectory),
-				"job_id":  context.JobID,
+				"job_id":  jobctx.JobID,
 			})
 			return targetDirectory, possibleComposeFile, true, nil
 		}
@@ -73,12 +74,12 @@ func DetermineBackupTarget(context *jobcontext.JobContext, targetDir, dockerName
 		logger.LogxWithFields("debug", fmt.Sprintf("Compose file not found in target dir at %s", filepath.Join(targetDirectory, "docker-compose.yml")), map[string]interface{}{
 			"package": "backup",
 			"target":  filepath.Base(targetDirectory),
-			"job_id":  context.JobID,
+			"job_id":  jobctx.JobID,
 		})
 		logger.LogxWithFields("debug", "Treating as regular dir backup and skipping docker jobs", map[string]interface{}{
 			"package": "backup",
 			"target":  filepath.Base(targetDirectory),
-			"job_id":  context.JobID,
+			"job_id":  jobctx.JobID,
 		})
 		return targetDirectory, "", false, nil
 	}
@@ -86,16 +87,16 @@ func DetermineBackupTarget(context *jobcontext.JobContext, targetDir, dockerName
 	logger.LogxWithFields("error", "Invalid -target-dir or -docker-name passed", map[string]interface{}{
 		"package": "backup",
 		"target":  filepath.Base(filepath.Dir(composeFilePath)),
-		"job_id":  context.JobID,
+		"job_id":  jobctx.JobID,
 	})
 	return "", "", dockerEnabled, fmt.Errorf("no valid target directory or Docker service specified")
 }
 
 // determines path for new backupfile based on user input
-func PrepareBackupFilePath(context *jobcontext.JobContext, localBackupDir, targetDir, customOutputDir, tagOutputString string, skipLocal bool) (string, error) {
+func PrepareBackupFilePath(jobctx *jobcontext.JobContext, localBackupDir, targetDir, customOutputDir, tagOutputString string, skipLocal bool) (string, error) {
 
 	// defining logging fields
-	verboseFields := backupLogBaseFields(*context)
+	verboseFields := backupLogBaseFields(*jobctx)
 	// coreFields := logger.CoreLogFields(context, "backup")
 
 	// sanitize target directory suffix
@@ -145,12 +146,12 @@ func ValidateBackupFilePath(backupFilePath string) error {
 
 	// firstly validate parent of determined target dir exists
 	parentDir := filepath.Dir(backupFilePath)
-	if err := sysutil.ValidateDirectoryString(parentDir); err != nil {
+	if err := util.ValidateDirectoryString(parentDir); err != nil {
 		return fmt.Errorf("target backup path validation failed: %v", err)
 	}
 
 	// validate that the parentdir is writeable
-	if err := sysutil.ValidateDirectoryWriteable(parentDir); err != nil {
+	if err := util.ValidateDirectoryWriteable(parentDir); err != nil {
 		return fmt.Errorf("target directory is not writeable: %v", err)
 	}
 
@@ -299,7 +300,7 @@ func ShellCompressDirectory(context *jobcontext.JobContext, targetDir, outputFil
 	}
 
 	// run tar compression
-	err := sysutil.RunCommand(
+	err := util.RunCommand(
 		"tar",
 		"-cvzf",
 		outputFile,

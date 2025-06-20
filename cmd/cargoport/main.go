@@ -11,16 +11,14 @@ import (
 
 	"github.com/adrian-griffin/cargoport/backup"
 	"github.com/adrian-griffin/cargoport/docker"
-	"github.com/adrian-griffin/cargoport/environment"
-	"github.com/adrian-griffin/cargoport/inputhandler"
+	"github.com/adrian-griffin/cargoport/input"
 	"github.com/adrian-griffin/cargoport/jobcontext"
-	"github.com/adrian-griffin/cargoport/keytool"
 	"github.com/adrian-griffin/cargoport/logger"
 	"github.com/adrian-griffin/cargoport/remote"
-	"github.com/adrian-griffin/cargoport/sysutil"
+	"github.com/adrian-griffin/cargoport/util"
 )
 
-const Version = "v0.93.0"
+const Version = "v0.93.3"
 const motd = "kind words cost nothing <3"
 
 // debug level logging output fields for main package
@@ -52,32 +50,27 @@ func mainLogFatalFields(context *jobcontext.JobContext) map[string]interface{} {
 
 // main loop
 func main() {
-
-	//<section>   PARSE FLAGS
-	//------------
-	// special flags
+	// version & setup flags
 	appVersion := flag.Bool("version", false, "Display app version information")
 	initEnvBool := flag.Bool("setup", false, "Run setup utility")
 
-	// primary backup flags
+	// core job flags
 	targetDir := flag.String("target-dir", "", "Target directory to back up (detects if the directory is a Docker environment)")
 	dockerName := flag.String("docker-name", "", "Target Docker service name (involves all Docker containers defined in the compose file)")
 	localOutputDir := flag.String("output-dir", "", "Custom destination for local output")
 	restartDockerBool := flag.Bool("restart-docker", true, "Restart docker container after successful backup. Enabled by default")
+	tagOutputString := flag.String("tag", "", "Append identifying tag to output file name (e.g: service1-<tag>.bak.tar.gz)")
 
 	// remote transfer flags
 	skipLocal := flag.Bool("skip-local", false, "Skip local backup & only send to remote target")
 	remoteUser := flag.String("remote-user", "", "Remote machine username")
 	remoteHost := flag.String("remote-host", "", "Remote machine IP(v4/v6) address or hostname")
 	remoteOutputDir := flag.String("remote-dir", "", "Remote target directory (file saved as <remote-dir>/<file>.bak.tar.gz)")
-	sendDefaultsBool := flag.Bool("remote-send-defaults", false, "Toggles remote send functionality using configfile default creds, overrides remote-user and remote-host flags")
+	sendDefaults := flag.Bool("remote-send-defaults", false, "Toggles remote send functionality using configfile default creds, overrides remote-user and remote-host flags")
 
 	// ssh key flags
 	newSSHKeyBool := flag.Bool("generate-keypair", false, "Generate new SSH key for cargoport")
 	copySSHKeyBool := flag.Bool("copy-key", false, "Copy cargoport SSH key to remote host")
-
-	// snapshot versioning and tagging flags
-	tagOutputString := flag.String("tag", "", "Append identifying tag to output file name (e.g: service1-<tag>.bak.tar.gz)")
 
 	// custom help messaging
 	flag.Usage = func() {
@@ -92,47 +85,51 @@ func main() {
 		fmt.Println("        Display app version information")
 		fmt.Println("\n  [SSH Key Flags]")
 		fmt.Println("     -copy-key")
-		fmt.Println("        Copy public key to remote machine, must be passed with remote-host & remote-user")
+		fmt.Println("        Copy public key to remote machine, must be passed with explicit remote-host & remote-user")
 		fmt.Println("     -generate-keypair")
 		fmt.Println("        Generate a new set of SSH keys based on name & location defined in config")
-		fmt.Println("\n  [Backup Flags]")
-		fmt.Println("     -target-dir <dir>")
-		fmt.Println("        Target directory to back up (detects if the directory is a Docker environment)")
-		fmt.Println("     -output-dir <dir>")
-		fmt.Println("        Custom destination for local output")
-		fmt.Println("     -docker-name <name>")
-		fmt.Println("        Target Docker service name (involves all Docker containers defined in the compose file)")
-		fmt.Println("     -restart-docker <bool>")
-		fmt.Println("        Restart docker container after successful backup. Enabled by default")
+		fmt.Println("\n  [Main Backup Flags]")
+		fmt.Println("      [Target Selection Flags]")
+		fmt.Println("        -target-dir <dir>")
+		fmt.Println("           Target directory to back up (detects if the directory is a Docker environment)")
+		fmt.Println("        -docker-name <name>")
+		fmt.Println("           Target Docker service name (involves all Docker containers defined in the compose file)")
+		fmt.Println("\n    [Extra Job Flags]")
+		fmt.Println("        -output-dir <dir>")
+		fmt.Println("           Custom destination for local output")
+		fmt.Println("        -restart-docker <bool>")
+		fmt.Println("           Restart docker container after successful backup. Enabled by default")
+		fmt.Println("        -tag <tag>")
+		fmt.Println("           Append identifying tag to output file name (e.g: service1-<tag>.bak.tar.gz)")
 		fmt.Println("\n  [Remote Transfer Flags]")
-		fmt.Println("     -skip-local")
-		fmt.Println("        Skip local backup and only send to the remote target (Note: utilized `/tmp`)")
-		fmt.Println("     -remote-user <user>")
-		fmt.Println("        Remote machine username")
-		fmt.Println("     -remote-host <host>")
-		fmt.Println("        Remote machine IP(v4/v6) address or hostname")
-		fmt.Println("     -remote-dir <dir>")
-		fmt.Println("        Remote target directory (file will save as <remote-dir>/<file>.bak.tar.gz)")
-		fmt.Println("     -remote-send-defaults")
-		fmt.Println("        Remote transfer backup using default remote values in config.yml")
-		fmt.Println("     -tag <tag>")
-		fmt.Println("        Append identifying tag to output file name (e.g: service1-<tag>.bak.tar.gz)")
+		fmt.Println("      -skip-local")
+		fmt.Println("         Skip local backup and only send to the remote target (Note: utilized `/tmp`)")
+		fmt.Println("      -remote-user <user>")
+		fmt.Println("         Remote machine username")
+		fmt.Println("      -remote-host <host>")
+		fmt.Println("         Remote machine IP(v4/v6) address or hostname")
+		fmt.Println("      -remote-dir <dir>")
+		fmt.Println("         Remote target directory (file will save as <remote-dir>/<file>.bak.tar.gz)")
+		fmt.Println("      -remote-send-defaults")
+		fmt.Println("         Remote transfer backup using default remote values in config.yml")
 
 		fmt.Println("\n[Examples]")
-		fmt.Println("  cargoport -setup")
-		fmt.Println("  cargoport -copy-key -remote-host <host> -remote-user <username>")
-		fmt.Println("  cargoport -target-dir=/path/to/dir -remote-user=admin -remote-host=<host>")
-		fmt.Println("  cargoport -docker-name=container-name -remote-send-defaults -skip-local")
-		fmt.Println("  cargoport -docker-name=container-name -tag='pre-pull' -restart-docker=false")
+		fmt.Println("  First time setup")
+		fmt.Println("    cargoport -setup")
+		fmt.Println("\n  Copy SSH key to remote machine")
+		fmt.Println("    cargoport -copy-key -remote-host <host> -remote-user <username>")
+		fmt.Println("\n  Perform compressive backup of target directory")
+		fmt.Println("    cargoport -target-dir=/path/to/dir -remote-user=admin -remote-host=<host>")
+		fmt.Println("\n  Perform compressive backup of target docker container(s) by service name")
+		fmt.Println("    cargoport -docker-name=container-name -remote-send-defaults -skip-local")
+		fmt.Println("    cargoport -docker-name=container-name -tag='pre-pull' -restart-docker=false")
 
-		fmt.Println("\nFor more information, please see the git repo readme")
+		fmt.Println("\nFor more information, please check out the git repo readme <3")
 	}
 
 	flag.Parse()
 
-	//<section>   SPECIAL FLAGS
-	//------------
-	// issue version info
+	// special flags
 	if *appVersion {
 		fmt.Printf("cargoport  ~  %s\n", motd)
 		fmt.Printf("version: %s", Version)
@@ -141,30 +138,27 @@ func main() {
 
 	// if setup flag passed
 	if *initEnvBool {
-		environment.SetupTool()
+		input.SetupTool()
 		os.Exit(0)
 	}
 
-	//<section>   LOAD CONFIG & INIT ENV
-	//------------
-	// determine configfile location
-	configFilePath, err := environment.GetConfigFilePath()
+	// load configfile
+	configFilePath, err := input.GetConfigFilePath()
 	if err != nil {
 		logger.Logx.Fatal("Failed to read config.yml, please try cargoport -setup first!")
 	}
-	// parse config file to set defaults
-	configFile, err := environment.LoadConfigFile(configFilePath)
+	configFile, err := input.LoadConfigFile(configFilePath)
 	if err != nil {
 		logger.Logx.Fatalf("Error parsing config: %v", err)
 	}
 
 	// init environment
-	_, cargoportLocal, _, _, _ := environment.InitEnvironment(*configFile)
+	_, cargoportLocal, _, _, _ := input.InitEnvironment(*configFile)
 
 	if *newSSHKeyBool {
 		sshKeyDir := configFile.SSHKeyDir
 		sshKeyName := configFile.SSHKeyName
-		if err := keytool.GenerateSSHKeypair(sshKeyDir, sshKeyName); err != nil {
+		if err := util.GenerateSSHKeypair(sshKeyDir, sshKeyName); err != nil {
 			logger.Logx.Fatalf("Failed to generate SSH key: %v", err)
 		}
 		os.Exit(0)
@@ -172,7 +166,7 @@ func main() {
 
 	// validate permissions & integrity on private key
 	sshPrivateKeyPath := filepath.Join(configFile.SSHKeyDir, configFile.SSHKeyName)
-	if err := keytool.ValidateSSHPrivateKeyPerms(sshPrivateKeyPath); err != nil {
+	if err := util.ValidateSSHPrivateKeyPerms(sshPrivateKeyPath); err != nil {
 		logger.Logx.Error("Unable to validate keypair, please check configfile or create a new pair")
 		logger.Logx.Fatalf("Key validation error: %v", err)
 	}
@@ -184,15 +178,28 @@ func main() {
 		}
 		// copy public key to remote machine
 		sshPrivKeypath := filepath.Join(configFile.SSHKeyDir, configFile.SSHKeyName)
-		if err := keytool.CopyPublicKey(sshPrivKeypath, *remoteUser, *remoteHost); err != nil {
+		if err := util.CopyPublicKey(sshPrivKeypath, *remoteUser, *remoteHost); err != nil {
 			logger.Logx.Errorf("Failed to copy SSH public key: %v", err)
 		}
 		os.Exit(0)
 	}
 
+	// build input context
+	inputCTX := &input.InputContext{
+		TargetDir:       *targetDir,
+		DockerName:      *dockerName,
+		OutputDir:       *localOutputDir,
+		RestartDocker:   *restartDockerBool,
+		SkipLocal:       *skipLocal,
+		RemoteUser:      *remoteUser,
+		RemoteHost:      *remoteHost,
+		RemoteOutputDir: *remoteOutputDir,
+		SendDefaults:    *sendDefaults,
+		Tag:             *tagOutputString,
+		Config:          configFile,
+	}
 	// interpret flags & handle config overrides
-	err = inputhandler.InterpretFlags(targetDir, dockerName, localOutputDir, skipLocal, remoteUser, remoteHost, remoteOutputDir, sendDefaultsBool, *configFile)
-	if err != nil {
+	if err := input.Finalize(inputCTX); err != nil {
 		logger.LogxWithFields("fatal", fmt.Sprintf("Failure to parse input: %v", err), map[string]interface{}{
 			"package": "main",
 			"target":  filepath.Base(*targetDir),
@@ -200,22 +207,22 @@ func main() {
 		})
 	}
 
-	// generate job ID & populate context
+	// generate job ID & populate jobcontext
 	jobID := jobcontext.GenerateJobID()
 
 	jobCTX := jobcontext.JobContext{
 		Target:                 "",
-		Remote:                 (*remoteHost != ""),
+		Remote:                 (inputCTX.RemoteHost != ""),
 		Docker:                 false,
-		SkipLocal:              *skipLocal,
+		SkipLocal:              inputCTX.SkipLocal,
 		JobID:                  jobID,
 		StartTime:              time.Now(), // begin timer now
 		TargetDir:              "",
 		RootDir:                cargoportLocal,
-		Tag:                    *tagOutputString,
-		RestartDocker:          *restartDockerBool,
-		RemoteHost:             string(*remoteHost),
-		RemoteUser:             string(*remoteUser),
+		Tag:                    inputCTX.Tag,
+		RestartDocker:          inputCTX.RestartDocker,
+		RemoteHost:             string(inputCTX.RemoteHost),
+		RemoteUser:             string(inputCTX.RemoteUser),
 		CompressedSizeBytesInt: 0,
 		CompressedSizeMBString: "0.0 MB",
 	}
@@ -227,7 +234,7 @@ func main() {
 	})
 
 	// determine backup target
-	targetPath, composeFilePath, dockerEnabled, err := backup.DetermineBackupTarget(&jobCTX, targetDir, dockerName)
+	targetPath, composeFilePath, dockerEnabled, err := backup.DetermineBackupTarget(&jobCTX, inputCTX)
 	if err != nil {
 		logger.LogxWithFields("fatal", fmt.Sprintf("Failure to determine backup target: %v", err), map[string]interface{}{
 			"package": "main",
@@ -296,11 +303,11 @@ func main() {
 
 	// handle remote transfer
 	if *remoteHost != "" {
-		err := remote.HandleRemoteTransfer(&jobCTX, backupFilePath, *remoteUser, *remoteHost, *remoteOutputDir, *skipLocal, *configFile)
+		err := remote.HandleRemoteTransfer(&jobCTX, backupFilePath, inputCTX)
 		if err != nil {
 			// if remote fail, then remove tempfile when skipLocal enabled
 			if *skipLocal {
-				sysutil.RemoveTempFile(&jobCTX, backupFilePath)
+				util.RemoveTempFile(&jobCTX, backupFilePath)
 				logger.LogxWithFields("debug", fmt.Sprintf("Removing local tempfile %s", backupFilePath), verboseFields)
 
 			}

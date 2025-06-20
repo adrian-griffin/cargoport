@@ -9,7 +9,7 @@ import (
 
 	"github.com/adrian-griffin/cargoport/jobcontext"
 	"github.com/adrian-griffin/cargoport/logger"
-	"github.com/adrian-griffin/cargoport/sysutil"
+	"github.com/adrian-griffin/cargoport/util"
 )
 
 // debug level logging output fields for docker package
@@ -66,7 +66,7 @@ func HandleDockerPreBackup(context *jobcontext.JobContext, composeFilePath, targ
 	if err != nil || !running {
 		logger.LogxWithFields("warn", fmt.Sprintf("No active Docker container at %s. Proceeding with backup.", composeFilePath), coreFields)
 		// temporarily partially bring up container to gather image information
-		if err := sysutil.RunCommand("docker", "compose", "-f", composeFilePath, "up", "--no-start"); err != nil {
+		if err := util.RunCommand("docker", "compose", "-f", composeFilePath, "up", "--no-start"); err != nil {
 			return fmt.Errorf("failed to partially bring up docker containers containers for image inspection: %v", err)
 		}
 	}
@@ -79,7 +79,7 @@ func HandleDockerPreBackup(context *jobcontext.JobContext, composeFilePath, targ
 
 	// shuts down docker container from composefile
 	logger.LogxWithFields("debug", fmt.Sprintf("Performing Docker compose down jobs on %s", composeFilePath), verboseFields)
-	if err := sysutil.RunCommand("docker", "compose", "-f", composeFilePath, "down"); err != nil {
+	if err := util.RunCommand("docker", "compose", "-f", composeFilePath, "down"); err != nil {
 		return fmt.Errorf("failed to stop Docker containers: %v", err)
 	}
 
@@ -162,8 +162,8 @@ func startDockerContainer(context *jobcontext.JobContext, composefile string) er
 	coreFields := logger.CoreLogFields(context, "docker")
 
 	// restart docker container
-	logger.LogxWithFields("debug", fmt.Sprintf("Starting Docker container at %s as headless/daemon", filepath.Dir(composefile)), verboseFields)
-	err := sysutil.RunCommand("docker", "compose", "-f", composefile, "up", "-d")
+	logger.LogxWithFields("debug", fmt.Sprintf("Starting Docker container at %s as headless daemon", filepath.Dir(composefile)), verboseFields)
+	err := util.RunCommand("docker", "compose", "-f", composefile, "up", "-d")
 	if err != nil {
 		logger.LogxWithFields("error", fmt.Sprintf("Error starting Docker container: %v", err), coreFields)
 		return err

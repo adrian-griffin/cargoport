@@ -1,4 +1,4 @@
-package sysutil
+package util
 
 import (
 	"bytes"
@@ -11,9 +11,9 @@ import (
 	"github.com/adrian-griffin/cargoport/logger"
 )
 
-// debug level logging output fields for sysutil package
-func sysUtilLogDebugFields(context *jobcontext.JobContext) map[string]interface{} {
-	coreFields := logger.CoreLogFields(context, "sysutil")
+// debug level logging output fields for system package
+func systemLogDebugFields(context *jobcontext.JobContext) map[string]interface{} {
+	coreFields := logger.CoreLogFields(context, "system")
 	fields := logger.MergeFields(coreFields, map[string]interface{}{
 		"skip_local": context.SkipLocal,
 		"target_dir": context.TargetDir,
@@ -49,14 +49,14 @@ func RunCommandWithOutput(cmd string, args ...string) (string, error) {
 // remove file from os
 func RemoveTempFile(context *jobcontext.JobContext, filePath string) error {
 
-	verboseFields := sysUtilLogDebugFields(context)
+	verboseFields := systemLogDebugFields(context)
 
 	logger.LogxWithFields("debug", fmt.Sprintf("Cleaning up tempfile at %s", filePath), verboseFields)
 
 	if err := os.Remove(filePath); err != nil {
 		return fmt.Errorf("error removing tempfile: %v", err)
 	} else {
-		logger.LogxWithFields("debug", fmt.Sprintf("Tempfile %s removed\n", filePath), verboseFields)
+		logger.LogxWithFields("debug", fmt.Sprintf("Tempfile %s removed", filePath), verboseFields)
 	}
 
 	return nil
