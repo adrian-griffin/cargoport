@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/adrian-griffin/cargoport/jobcontext"
+	"github.com/adrian-griffin/cargoport/job"
 	"github.com/sirupsen/logrus"
 )
 
@@ -47,7 +47,7 @@ func MergeFields(presetFields map[string]interface{}, addOnFields map[string]int
 }
 
 // core, minimum log fields for all structured logging
-func CoreLogFields(context *jobcontext.JobContext, pkg string) map[string]interface{} {
+func CoreLogFields(context *job.JobContext, pkg string) map[string]interface{} {
 	return map[string]interface{}{
 		"target":  context.Target,
 		"job_id":  context.JobID,

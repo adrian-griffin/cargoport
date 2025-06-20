@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/adrian-griffin/cargoport/jobcontext"
+	"github.com/adrian-griffin/cargoport/job"
 	"github.com/adrian-griffin/cargoport/logger"
 )
 
 // debug level logging output fields for docker package
-func netHandlerLogDebugFields(context *jobcontext.JobContext) map[string]interface{} {
+func netHandlerLogDebugFields(context *job.JobContext) map[string]interface{} {
 	coreFields := logger.CoreLogFields(context, "net")
 	fields := logger.MergeFields(coreFields, map[string]interface{}{
 		"remote":      context.Remote,
@@ -70,7 +70,7 @@ func ICMPRemoteHost(remoteHost string) error {
 }
 
 // test SSH connectivity to remote host
-func SSHTestRemoteHost(context *jobcontext.JobContext, remoteHost, remoteUser, sshPrivKeypath string) error {
+func SSHTestRemoteHost(context *job.JobContext, remoteHost, remoteUser, sshPrivKeypath string) error {
 
 	// defining logging fields
 	verboseFields := netHandlerLogDebugFields(context)

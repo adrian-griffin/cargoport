@@ -10,11 +10,9 @@ import (
 	"time"
 
 	"github.com/adrian-griffin/cargoport/backup"
-	"github.com/adrian-griffin/cargoport/docker"
 	"github.com/adrian-griffin/cargoport/input"
-	"github.com/adrian-griffin/cargoport/jobcontext"
+	"github.com/adrian-griffin/cargoport/job"
 	"github.com/adrian-griffin/cargoport/logger"
-	"github.com/adrian-griffin/cargoport/remote"
 	"github.com/adrian-griffin/cargoport/util"
 )
 
@@ -22,7 +20,7 @@ const Version = "v0.93.3"
 const motd = "kind words cost nothing <3"
 
 // debug level logging output fields for main package
-func mainLogDebugFields(context *jobcontext.JobContext) map[string]interface{} {
+func mainLogDebugFields(context *job.JobContext) map[string]interface{} {
 	coreFields := logger.CoreLogFields(context, "main")
 	fields := logger.MergeFields(coreFields, map[string]interface{}{
 		"remote":         context.Remote,
@@ -39,7 +37,7 @@ func mainLogDebugFields(context *jobcontext.JobContext) map[string]interface{} {
 }
 
 // fatal level logging output fields for main package
-func mainLogFatalFields(context *jobcontext.JobContext) map[string]interface{} {
+func mainLogFatalFields(context *job.JobContext) map[string]interface{} {
 	debugFields := mainLogDebugFields(context)
 	fields := logger.MergeFields(debugFields, map[string]interface{}{
 		"success": false,
@@ -136,6 +134,14 @@ func main() {
 		os.Exit(0)
 	}
 
+	// validate that current UID=0/program is running as root
+	if os.Geteuid() != 0 {
+		fmt.Println("Please run Cargoport with sudo or as the root user")
+		fmt.Println("This is required to access Docker volumes, manage SSH keys, and write to system directories")
+		fmt.Println("For details and security considerations, see the GitHub README <3")
+		os.Exit(0)
+	}
+
 	// if setup flag passed
 	if *initEnvBool {
 		input.SetupTool()
@@ -208,9 +214,9 @@ func main() {
 	}
 
 	// generate job ID & populate jobcontext
-	jobID := jobcontext.GenerateJobID()
+	jobID := job.GenerateJobID()
 
-	jobCTX := jobcontext.JobContext{
+	jobCTX := job.JobContext{
 		Target:                 "",
 		Remote:                 (inputCTX.RemoteHost != ""),
 		Docker:                 false,
@@ -283,7 +289,7 @@ func main() {
 
 	// handle pre-backup docker tasks
 	if dockerEnabled {
-		if err := docker.HandleDockerPreBackup(&jobCTX, composeFilePath, targetBaseName); err != nil {
+		if err := backup.HandleDockerPreBackup(&jobCTX, composeFilePath, targetBaseName); err != nil {
 			logger.LogxWithFields("fatal", fmt.Sprintf("Failure to perform pre-snapshot docker tasks: %v", err), fatalFields)
 		}
 	}
@@ -293,7 +299,7 @@ func main() {
 
 		// if docker restart fails, log error
 		if dockerEnabled {
-			if dockererr := docker.HandleDockerPostBackup(&jobCTX, composeFilePath, *restartDockerBool); dockererr != nil {
+			if dockererr := backup.HandleDockerPostBackup(&jobCTX, composeFilePath, *restartDockerBool); dockererr != nil {
 				logger.LogxWithFields("error", fmt.Sprintf("Failure to handle docker compose after backup: %v", dockererr), coreFields)
 			}
 		}
@@ -303,7 +309,7 @@ func main() {
 
 	// handle remote transfer
 	if *remoteHost != "" {
-		err := remote.HandleRemoteTransfer(&jobCTX, backupFilePath, inputCTX)
+		err := backup.HandleRemoteTransfer(&jobCTX, backupFilePath, inputCTX)
 		if err != nil {
 			// if remote fail, then remove tempfile when skipLocal enabled
 			if *skipLocal {
@@ -314,7 +320,7 @@ func main() {
 
 			// if remote fail, then handle post-backup docker jobs
 			if dockerEnabled {
-				if err := docker.HandleDockerPostBackup(&jobCTX, composeFilePath, *restartDockerBool); err != nil {
+				if err := backup.HandleDockerPostBackup(&jobCTX, composeFilePath, *restartDockerBool); err != nil {
 					logger.LogxWithFields("fatal", fmt.Sprintf("Failure to reinitialize docker service after failed transfer: %v", err), fatalFields)
 				}
 			}
@@ -327,7 +333,7 @@ func main() {
 
 	// handle docker post backup
 	if dockerEnabled {
-		if err := docker.HandleDockerPostBackup(&jobCTX, composeFilePath, *restartDockerBool); err != nil {
+		if err := backup.HandleDockerPostBackup(&jobCTX, composeFilePath, *restartDockerBool); err != nil {
 			logger.LogxWithFields("error", fmt.Sprintf("Failure to restart docker service: %v", err), coreFields)
 		}
 	}

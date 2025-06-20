@@ -1,4 +1,4 @@
-package docker
+package backup
 
 import (
 	"fmt"
@@ -7,13 +7,13 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/adrian-griffin/cargoport/jobcontext"
+	"github.com/adrian-griffin/cargoport/job"
 	"github.com/adrian-griffin/cargoport/logger"
 	"github.com/adrian-griffin/cargoport/util"
 )
 
 // debug level logging output fields for docker package
-func dockerLogBaseFields(context *jobcontext.JobContext) map[string]interface{} {
+func dockerLogBaseFields(context *job.JobContext) map[string]interface{} {
 	coreFields := logger.CoreLogFields(context, "docker")
 	fields := logger.MergeFields(coreFields, map[string]interface{}{
 		"docker":         context.Docker,
@@ -54,7 +54,7 @@ func checkDockerRunState(composeFile string) (bool, error) {
 }
 
 // stop docker containers & collect image ids and digests
-func HandleDockerPreBackup(context *jobcontext.JobContext, composeFilePath, targetBaseName string) error {
+func HandleDockerPreBackup(context *job.JobContext, composeFilePath, targetBaseName string) error {
 
 	// defining logging fields
 	verboseFields := dockerLogBaseFields(context)
@@ -96,7 +96,7 @@ func HandleDockerPreBackup(context *jobcontext.JobContext, composeFilePath, targ
 }
 
 // collects docker image information and digests, stores alongside `docker-compose.yml` file
-func writeDockerImages(context *jobcontext.JobContext, composeFile string, outputFile string) error {
+func writeDockerImages(context *job.JobContext, composeFile string, outputFile string) error {
 
 	// defining logging fields
 	verboseFields := dockerLogBaseFields(context)
@@ -139,7 +139,7 @@ func writeDockerImages(context *jobcontext.JobContext, composeFile string, outpu
 }
 
 // handles docker container restart/turn-up commands
-func HandleDockerPostBackup(context *jobcontext.JobContext, composeFilePath string, restartDockerBool bool) error {
+func HandleDockerPostBackup(context *job.JobContext, composeFilePath string, restartDockerBool bool) error {
 
 	verboseFields := dockerLogBaseFields(context)
 	// coreFields := logger.CoreLogFields(context, "docker")
@@ -156,7 +156,7 @@ func HandleDockerPostBackup(context *jobcontext.JobContext, composeFilePath stri
 }
 
 // starts docker container from yaml file
-func startDockerContainer(context *jobcontext.JobContext, composefile string) error {
+func startDockerContainer(context *job.JobContext, composefile string) error {
 
 	verboseFields := dockerLogBaseFields(context)
 	coreFields := logger.CoreLogFields(context, "docker")

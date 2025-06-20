@@ -9,15 +9,14 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/adrian-griffin/cargoport/docker"
 	"github.com/adrian-griffin/cargoport/input"
-	"github.com/adrian-griffin/cargoport/jobcontext"
+	"github.com/adrian-griffin/cargoport/job"
 	"github.com/adrian-griffin/cargoport/logger"
 	"github.com/adrian-griffin/cargoport/util"
 )
 
 // debug level logging output fields for backup package
-func backupLogBaseFields(context jobcontext.JobContext) map[string]interface{} {
+func backupLogBaseFields(context job.JobContext) map[string]interface{} {
 	coreFields := logger.CoreLogFields(&context, "backup")
 	fields := logger.MergeFields(coreFields, map[string]interface{}{
 		"skip_local": context.SkipLocal,
@@ -28,14 +27,14 @@ func backupLogBaseFields(context jobcontext.JobContext) map[string]interface{} {
 }
 
 // determines target dir for backup based on input user input
-func DetermineBackupTarget(jobctx *jobcontext.JobContext, inputcxt *input.InputContext) (string, string, bool, error) {
+func DetermineBackupTarget(jobctx *job.JobContext, inputcxt *input.InputContext) (string, string, bool, error) {
 	var composeFilePath string
 	dockerEnabled := false
 
 	// validates composefile, returns its path and dirpath, and enables dockerMode
 	if inputcxt.DockerName != "" {
 		var err error
-		composeFilePath, err = docker.FindComposeFile(inputcxt.DockerName, filepath.Base(inputcxt.TargetDir))
+		composeFilePath, err = FindComposeFile(inputcxt.DockerName, filepath.Base(inputcxt.TargetDir))
 		if err != nil {
 			logger.LogxWithFields("error", fmt.Sprintf("Compose file validation failure at %s", inputcxt.TargetDir), map[string]interface{}{
 				"package": "backup",
@@ -93,7 +92,7 @@ func DetermineBackupTarget(jobctx *jobcontext.JobContext, inputcxt *input.InputC
 }
 
 // determines path for new backupfile based on user input
-func PrepareBackupFilePath(jobctx *jobcontext.JobContext, localBackupDir, targetDir, customOutputDir, tagOutputString string, skipLocal bool) (string, error) {
+func PrepareBackupFilePath(jobctx *job.JobContext, localBackupDir, targetDir, customOutputDir, tagOutputString string, skipLocal bool) (string, error) {
 
 	// defining logging fields
 	verboseFields := backupLogBaseFields(*jobctx)
@@ -159,7 +158,7 @@ func ValidateBackupFilePath(backupFilePath string) error {
 }
 
 // compresses target directory into output file tarball usin Go
-func CompressDirectory(context *jobcontext.JobContext, targetDir, outputFile string) error {
+func CompressDirectory(context *job.JobContext, targetDir, outputFile string) error {
 
 	// defining logging fields
 	verboseFields := backupLogBaseFields(*context)
@@ -282,7 +281,7 @@ func CompressDirectory(context *jobcontext.JobContext, targetDir, outputFile str
 }
 
 // shells out to cli to compresses target directory into output file tarball
-func ShellCompressDirectory(context *jobcontext.JobContext, targetDir, outputFile string) error {
+func ShellCompressDirectory(context *job.JobContext, targetDir, outputFile string) error {
 
 	// defining logging fields
 	verboseFields := backupLogBaseFields(*context)

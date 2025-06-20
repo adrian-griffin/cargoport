@@ -58,11 +58,6 @@ func InitEnvironment(configFile ConfigFile) (string, string, string, string, str
 // guided setup tool for initial init
 func SetupTool() {
 
-	// validate that current UID=0 during setuptool process
-	if os.Geteuid() != 0 {
-		log.Fatalf("The -setup command must be run as root (e.g. with sudo).")
-	}
-
 	fmt.Println("|---- Cargoport Setup Wizard -----|")
 	fmt.Println("|-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-|")
 	fmt.Println("    Thanks for trying this out!")

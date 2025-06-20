@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/adrian-griffin/cargoport/jobcontext"
+	"github.com/adrian-griffin/cargoport/job"
 	"github.com/adrian-griffin/cargoport/util"
 )
 
@@ -85,13 +85,13 @@ func Finalize(ic *InputContext) error {
 }
 
 // BuildJobContext initializes a new JobContext from InputContext
-func (ic *InputContext) BuildJobContext() *jobcontext.JobContext {
-	return &jobcontext.JobContext{
+func (ic *InputContext) BuildJobContext() *job.JobContext {
+	return &job.JobContext{
 		Target:                 "",
 		Remote:                 ic.RemoteHost != "",
 		Docker:                 false, // updated later after DetermineBackupTarget
 		SkipLocal:              ic.SkipLocal,
-		JobID:                  jobcontext.GenerateJobID(),
+		JobID:                  job.GenerateJobID(),
 		StartTime:              time.Now(),
 		TargetDir:              "", // updated later after DetermineBackupTarget
 		RootDir:                filepath.Join(ic.Config.DefaultCargoportDir, "local"),

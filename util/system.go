@@ -7,12 +7,12 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"github.com/adrian-griffin/cargoport/jobcontext"
+	"github.com/adrian-griffin/cargoport/job"
 	"github.com/adrian-griffin/cargoport/logger"
 )
 
 // debug level logging output fields for system package
-func systemLogDebugFields(context *jobcontext.JobContext) map[string]interface{} {
+func systemLogDebugFields(context *job.JobContext) map[string]interface{} {
 	coreFields := logger.CoreLogFields(context, "system")
 	fields := logger.MergeFields(coreFields, map[string]interface{}{
 		"skip_local": context.SkipLocal,
@@ -47,7 +47,7 @@ func RunCommandWithOutput(cmd string, args ...string) (string, error) {
 }
 
 // remove file from os
-func RemoveTempFile(context *jobcontext.JobContext, filePath string) error {
+func RemoveTempFile(context *job.JobContext, filePath string) error {
 
 	verboseFields := systemLogDebugFields(context)
 

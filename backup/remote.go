@@ -1,4 +1,4 @@
-package remote
+package backup
 
 import (
 	"fmt"
@@ -7,13 +7,13 @@ import (
 	"strings"
 
 	"github.com/adrian-griffin/cargoport/input"
-	"github.com/adrian-griffin/cargoport/jobcontext"
+	"github.com/adrian-griffin/cargoport/job"
 	"github.com/adrian-griffin/cargoport/logger"
 	"github.com/adrian-griffin/cargoport/util"
 )
 
 // debug level logging output fields for remote package
-func remoteLogDebugFields(context *jobcontext.JobContext) map[string]interface{} {
+func remoteLogDebugFields(context *job.JobContext) map[string]interface{} {
 	coreFields := logger.CoreLogFields(context, "remote")
 	fields := logger.MergeFields(coreFields, map[string]interface{}{
 		"remote":      context.Remote,
@@ -32,7 +32,7 @@ func remoteLogDebugFields(context *jobcontext.JobContext) map[string]interface{}
 // as well as logic for confirming enough space on remote for transfer
 
 // wrapper function for all remote-send functions
-func HandleRemoteTransfer(jobctx *jobcontext.JobContext, filePath string, inputctx *input.InputContext) error {
+func HandleRemoteTransfer(jobctx *job.JobContext, filePath string, inputctx *input.InputContext) error {
 
 	// <here> need to add logic here to toggle off icmp & ssh tests/validations in configfile
 	cargoportKey := filepath.Join(inputctx.Config.SSHKeyDir, inputctx.Config.SSHKeyName)
@@ -66,7 +66,7 @@ func HandleRemoteTransfer(jobctx *jobcontext.JobContext, filePath string, inputc
 }
 
 // handle remote rsync transfer to defined node
-func sendToRemote(jobctx *jobcontext.JobContext, passedRemotePath, passedRemoteUser, passedRemoteHost, backupFileNameBase, targetFileToTransfer, cargoportKey string, configFile input.ConfigFile) error {
+func sendToRemote(jobctx *job.JobContext, passedRemotePath, passedRemoteUser, passedRemoteHost, backupFileNameBase, targetFileToTransfer, cargoportKey string, configFile input.ConfigFile) error {
 
 	// defining logging fields
 	verboseFields := remoteLogDebugFields(jobctx)
