@@ -38,17 +38,29 @@ func GetConfigFilePath() (string, error) {
 		return "", fmt.Errorf("could not read %s: %v", ConfigFilePointer, err)
 	}
 	// strings data from pointerfile and gathers path location
-	trueConfigPath := strings.TrimSpace(string(pointerFileData))
-	if _, err := os.Stat(trueConfigPath); os.IsNotExist(err) {
-		return "", fmt.Errorf("config file in path %s does not exist", trueConfigPath)
+	targetConfigPath := strings.TrimSpace(string(pointerFileData))
+	if _, err := os.Stat(targetConfigPath); os.IsNotExist(err) {
+		return "", fmt.Errorf("config file in path %s does not exist", targetConfigPath)
 	}
-	return trueConfigPath, nil
+	return targetConfigPath, nil
 }
 
 // parse config file
-func LoadConfigFile(configFilePath string) (*ConfigFile, error) {
+func LoadConfigFile() (*ConfigFile, error) {
+
+	// opens configfile pointer file to reference path to yamlfile
+	pointerFileData, err := os.ReadFile(ConfigFilePointer)
+	if err != nil {
+		return nil, fmt.Errorf("could not read %s: %v", ConfigFilePointer, err)
+	}
+	// strings data from pointerfile and gathers path location
+	targetConfigPath := strings.TrimSpace(string(pointerFileData))
+	if _, err := os.Stat(targetConfigPath); os.IsNotExist(err) {
+		return nil, fmt.Errorf("config file in path %s does not exist", targetConfigPath)
+	}
+
 	// read config data from config file
-	configFileData, err := os.ReadFile(configFilePath)
+	configFileData, err := os.ReadFile(targetConfigPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read config file: %w", err)
 	}

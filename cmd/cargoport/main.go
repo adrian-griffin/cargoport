@@ -5,8 +5,10 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/adrian-griffin/cargoport/backup"
@@ -16,7 +18,7 @@ import (
 	"github.com/adrian-griffin/cargoport/util"
 )
 
-const Version = "v0.93.3"
+const Version = "v0.93.4"
 const motd = "kind words cost nothing <3"
 
 // debug level logging output fields for main package
@@ -50,7 +52,7 @@ func mainLogFatalFields(context *job.JobContext) map[string]interface{} {
 func main() {
 	// version & setup flags
 	appVersion := flag.Bool("version", false, "Display app version information")
-	initEnvBool := flag.Bool("setup", false, "Run setup utility")
+	setupBool := flag.Bool("setup", false, "Run setup utility")
 
 	// core job flags
 	targetDir := flag.String("target-dir", "", "Target directory to back up (detects if the directory is a Docker environment)")
@@ -143,51 +145,25 @@ func main() {
 	}
 
 	// if setup flag passed
-	if *initEnvBool {
+	if *setupBool {
 		input.SetupTool()
 		os.Exit(0)
 	}
 
 	// load configfile
-	configFilePath, err := input.GetConfigFilePath()
+	configFile, err := input.LoadConfigFile()
 	if err != nil {
-		logger.Logx.Fatal("Failed to read config.yml, please try cargoport -setup first!")
-	}
-	configFile, err := input.LoadConfigFile(configFilePath)
-	if err != nil {
-		logger.Logx.Fatalf("Error parsing config: %v", err)
+		log.Printf("Error parsing config: %v", err)
+		log.Fatalf("Perhaps consider running cargoport -setup again")
 	}
 
-	// init environment
-	_, cargoportLocal, _, _, _ := input.InitEnvironment(*configFile)
+	// init logging
+	logger.InitLogging(configFile.DefaultCargoportDir, configFile.LogLevel, configFile.LogFormat, configFile.LogTextColour)
 
-	if *newSSHKeyBool {
-		sshKeyDir := configFile.SSHKeyDir
-		sshKeyName := configFile.SSHKeyName
-		if err := util.GenerateSSHKeypair(sshKeyDir, sshKeyName); err != nil {
-			logger.Logx.Fatalf("Failed to generate SSH key: %v", err)
-		}
-		os.Exit(0)
-	}
-
-	// validate permissions & integrity on private key
-	sshPrivateKeyPath := filepath.Join(configFile.SSHKeyDir, configFile.SSHKeyName)
-	if err := util.ValidateSSHPrivateKeyPerms(sshPrivateKeyPath); err != nil {
-		logger.Logx.Error("Unable to validate keypair, please check configfile or create a new pair")
-		logger.Logx.Fatalf("Key validation error: %v", err)
-	}
-
-	// if BOTH remote user and remote host are specified during copy command, then proceed
-	if *copySSHKeyBool {
-		if *remoteHost == "" || *remoteUser == "" {
-			logger.Logx.Fatal("Both remote host and user must be specified to copy SSH key")
-		}
-		// copy public key to remote machine
-		sshPrivKeypath := filepath.Join(configFile.SSHKeyDir, configFile.SSHKeyName)
-		if err := util.CopyPublicKey(sshPrivKeypath, *remoteUser, *remoteHost); err != nil {
-			logger.Logx.Errorf("Failed to copy SSH public key: %v", err)
-		}
-		os.Exit(0)
+	// determine local rootdir
+	cargoportLocal := filepath.Join(strings.TrimSuffix(configFile.DefaultCargoportDir, "/"), "local")
+	if err := util.ValidateDirectoryString(cargoportLocal); err != nil {
+		logger.Logx.Fatalf("Local cargoport directory missing or unreadable: %v", err)
 	}
 
 	// build input context
@@ -202,6 +178,8 @@ func main() {
 		RemoteOutputDir: *remoteOutputDir,
 		SendDefaults:    *sendDefaults,
 		Tag:             *tagOutputString,
+		CopySSHKey:      *copySSHKeyBool,
+		GenerateSSHKey:  *newSSHKeyBool,
 		Config:          configFile,
 	}
 	// interpret flags & handle config overrides
@@ -211,6 +189,32 @@ func main() {
 			"target":  filepath.Base(*targetDir),
 			"success": false,
 		})
+	}
+
+	// handle ssh key generation
+	if inputCTX.GenerateSSHKey {
+		sshKeyDir := configFile.SSHKeyDir
+		sshKeyName := configFile.SSHKeyName
+		if err := util.GenerateSSHKeypair(sshKeyDir, sshKeyName); err != nil {
+			logger.Logx.Fatalf("Failed to generate SSH key: %v", err)
+		}
+		os.Exit(0)
+	}
+
+	// copy public key to remote machine if passed
+	if inputCTX.CopySSHKey {
+		sshPrivKeypath := filepath.Join(configFile.SSHKeyDir, configFile.SSHKeyName)
+		if err := util.CopyPublicKey(sshPrivKeypath, *remoteUser, *remoteHost); err != nil {
+			logger.Logx.Errorf("Failed to copy SSH public key: %v", err)
+		}
+		os.Exit(0)
+	}
+
+	// validate permissions & integrity on private key
+	sshPrivateKeyPath := filepath.Join(configFile.SSHKeyDir, configFile.SSHKeyName)
+	if err := util.ValidateSSHPrivateKeyPerms(sshPrivateKeyPath); err != nil {
+		logger.Logx.Error("Unable to validate keypair, please check configfile or create a new pair")
+		logger.Logx.Fatalf("Key validation error: %v", err)
 	}
 
 	// generate job ID & populate jobcontext

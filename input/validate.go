@@ -2,10 +2,7 @@ package input
 
 import (
 	"fmt"
-	"path/filepath"
-	"time"
 
-	"github.com/adrian-griffin/cargoport/job"
 	"github.com/adrian-griffin/cargoport/util"
 )
 
@@ -21,15 +18,31 @@ type InputContext struct {
 	RemoteOutputDir string
 	SendDefaults    bool
 	Tag             string
+	CopySSHKey      bool
+	GenerateSSHKey  bool
 
 	Config *ConfigFile
 }
 
-// Finalize merges config defaults and validates all input.
+// finalize merges config defaults and validates all input.
 func Finalize(ic *InputContext) error {
 	cfg := ic.Config
 
-	// Apply config defaults
+	// if ssh copykey bool then ensure both remote vars are set (explicit only)
+	if ic.CopySSHKey {
+		if ic.RemoteHost == "" || ic.RemoteUser == "" {
+			return fmt.Errorf("both remote host and user must be specified to copy SSH key")
+		}
+
+		// break out of finalizing input to process key copying & to prevent mixing of intent
+		return nil
+	}
+
+	if ic.GenerateSSHKey {
+		return nil
+	}
+
+	// apply config defaults
 	if ic.SendDefaults {
 		if cfg.RemoteUser == "" || cfg.RemoteHost == "" {
 			return fmt.Errorf("-remote-send-defaults used, but missing defaults in config")
@@ -39,17 +52,17 @@ func Finalize(ic *InputContext) error {
 		ic.RemoteOutputDir = cfg.RemoteOutputDir
 	}
 
-	// Fallback to config default for skipLocal
+	// fallback to config default for skipLocal
 	if !ic.SkipLocal && cfg.SkipLocal {
 		ic.SkipLocal = true
 	}
 
-	// Fallback remoteOutputDir if still unset
+	// fallback remoteOutputDir if still unset
 	if ic.RemoteOutputDir == "" && cfg.RemoteOutputDir != "" {
 		ic.RemoteOutputDir = cfg.RemoteOutputDir
 	}
 
-	// Validate target
+	// validate target
 	if ic.TargetDir == "" && ic.DockerName == "" {
 		return fmt.Errorf("must specify either -target-dir or -docker-name")
 	}
@@ -64,7 +77,7 @@ func Finalize(ic *InputContext) error {
 		}
 	}
 
-	// Validate remote config
+	// validate remote config
 	if ic.SkipLocal {
 		if ic.RemoteHost == "" || ic.RemoteUser == "" {
 			return fmt.Errorf("-skip-local requires remote-user and remote-host")
@@ -82,24 +95,4 @@ func Finalize(ic *InputContext) error {
 	}
 
 	return nil
-}
-
-// BuildJobContext initializes a new JobContext from InputContext
-func (ic *InputContext) BuildJobContext() *job.JobContext {
-	return &job.JobContext{
-		Target:                 "",
-		Remote:                 ic.RemoteHost != "",
-		Docker:                 false, // updated later after DetermineBackupTarget
-		SkipLocal:              ic.SkipLocal,
-		JobID:                  job.GenerateJobID(),
-		StartTime:              time.Now(),
-		TargetDir:              "", // updated later after DetermineBackupTarget
-		RootDir:                filepath.Join(ic.Config.DefaultCargoportDir, "local"),
-		Tag:                    ic.Tag,
-		RestartDocker:          ic.RestartDocker,
-		RemoteHost:             ic.RemoteHost,
-		RemoteUser:             ic.RemoteUser,
-		CompressedSizeBytesInt: 0,
-		CompressedSizeMBString: "0.0 MB",
-	}
 }
