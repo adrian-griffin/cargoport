@@ -75,6 +75,11 @@ func ValidateDirectoryString(directoryPathString string) error {
 }
 
 func ValidateDirectoryWriteable(directoryPathString string) error {
+	// validate directory string before proceeding
+	if err := ValidateDirectoryString(directoryPathString); err != nil {
+		return err
+	}
+
 	// attempt to create temp local file
 	testFilePath := filepath.Join(directoryPathString, ".cargoport_testwrite.tmp")
 	// create & remove file, return error if file creation fails

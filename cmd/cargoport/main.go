@@ -8,17 +8,14 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"time"
 
-	"github.com/adrian-griffin/cargoport/backup"
 	"github.com/adrian-griffin/cargoport/input"
 	"github.com/adrian-griffin/cargoport/job"
 	"github.com/adrian-griffin/cargoport/logger"
+	"github.com/adrian-griffin/cargoport/meta"
+	"github.com/adrian-griffin/cargoport/runner"
 	"github.com/adrian-griffin/cargoport/util"
 )
-
-const Version = "v0.93.6"
-const motd = "kind words cost nothing <3"
 
 // debug level logging output fields for main package
 func mainLogDebugFields(context *job.JobContext) map[string]interface{} {
@@ -74,7 +71,7 @@ func main() {
 	// custom help messaging
 	flag.Usage = func() {
 		fmt.Println("------------------------------------------------------------------------")
-		fmt.Printf("cargoport %s  ~  %s\n", Version, motd)
+		fmt.Printf("cargoport %s  ~  %s\n", meta.Version, meta.MOTD)
 		fmt.Println("-------------------------------------------------------------------------")
 		fmt.Println("[Options]")
 		fmt.Println("  [Setup & Info]")
@@ -130,8 +127,8 @@ func main() {
 
 	// special flags
 	if *appVersion {
-		fmt.Printf("cargoport  ~  %s\n", motd)
-		fmt.Printf("version: %s", Version)
+		fmt.Printf("cargoport  ~  %s\n", meta.MOTD)
+		fmt.Printf("version: %s", meta.Version)
 		os.Exit(0)
 	}
 
@@ -190,7 +187,7 @@ func main() {
 		sshKeyDir := configFile.SSHKeyDir
 		sshKeyName := configFile.SSHKeyName
 		if err := util.GenerateSSHKeypair(sshKeyDir, sshKeyName); err != nil {
-			logger.Logx.Fatalf("Failed to generate SSH key: %v", err)
+			logger.Logx.Fatalf("Failure generating SSH key: %v", err)
 		}
 		os.Exit(0)
 	}
@@ -199,7 +196,7 @@ func main() {
 	if inputCTX.CopySSHKey {
 		sshPrivKeypath := filepath.Join(configFile.SSHKeyDir, configFile.SSHKeyName)
 		if err := util.CopyPublicKey(sshPrivKeypath, *remoteUser, *remoteHost); err != nil {
-			logger.Logx.Errorf("Failed to copy SSH public key: %v", err)
+			logger.Logx.Errorf("Failure copying SSH public key: %v", err)
 		}
 		os.Exit(0)
 	}
@@ -207,151 +204,11 @@ func main() {
 	// validate permissions & integrity on private key
 	sshPrivateKeyPath := filepath.Join(configFile.SSHKeyDir, configFile.SSHKeyName)
 	if err := util.ValidateSSHPrivateKeyPerms(sshPrivateKeyPath); err != nil {
-		logger.Logx.Error("Unable to validate keypair, please check configfile or create a new pair")
+		logger.Logx.Error("Failure validating keypair, please check configfile or create a new pair")
 		logger.Logx.Fatalf("Key validation error: %v", err)
 	}
 
-	// generate job ID & populate jobcontext
-	jobID := job.GenerateJobID()
-
-	jobCTX := job.JobContext{
-		Target:                 "",
-		Remote:                 (inputCTX.RemoteHost != ""),
-		Docker:                 false,
-		SkipLocal:              inputCTX.SkipLocal,
-		JobID:                  jobID,
-		StartTime:              time.Now(), // begin timer now
-		TargetDir:              "",
-		RootDir:                inputCTX.DefaultOutputDir,
-		Tag:                    inputCTX.Tag,
-		RestartDocker:          inputCTX.RestartDocker,
-		RemoteHost:             string(inputCTX.RemoteHost),
-		RemoteUser:             string(inputCTX.RemoteUser),
-		CompressedSizeBytesInt: 0,
-		CompressedSizeMBString: "0.0 MB",
+	if err := runner.RunJob(inputCTX); err != nil {
+		logger.Logx.Fatalf("Failure to complete job: %v", err)
 	}
-
-	// log & print job start
-	logger.LogxWithFields("info", " --------------------------------------------------- ", map[string]interface{}{
-		"package": "spacer",
-		"job_id":  jobCTX.JobID,
-	})
-
-	// determine backup target
-	targetPath, composeFilePath, dockerEnabled, err := backup.DetermineBackupTarget(&jobCTX, inputCTX)
-	if err != nil {
-		logger.LogxWithFields("fatal", fmt.Sprintf("Failure to determine backup target: %v", err), map[string]interface{}{
-			"package": "main",
-			"target":  filepath.Base(filepath.Dir(*targetDir)),
-			"success": false,
-			"docker":  true,
-		})
-	}
-	jobCTX.Docker = dockerEnabled
-	jobCTX.Target = filepath.Base(targetPath)
-	jobCTX.TargetDir = targetPath
-
-	// prepare local backupfile & compose
-	backupFilePath, err := backup.PrepareBackupFilePath(&jobCTX, inputCTX)
-	if err != nil {
-		logger.LogxWithFields("fatal", fmt.Sprintf("Failure to determine output path: %v", err), map[string]interface{}{
-			"package":  "main",
-			"target":   filepath.Base(targetPath),
-			"root_dir": inputCTX.DefaultOutputDir,
-		})
-	}
-
-	/// << BEGIN JOB LOGIC >> (need to create jobhandler package)
-
-	// define job context based on determined information thus far in the job process
-
-	// --------------------
-	coreFields := logger.CoreLogFields(&jobCTX, "main")
-	verboseFields := mainLogDebugFields(&jobCTX)
-	fatalFields := mainLogFatalFields(&jobCTX)
-
-	logger.LogxWithFields("info", "New backup job added", map[string]interface{}{
-		"package": "main",
-		"target":  jobCTX.Target,
-		"remote":  jobCTX.Remote,
-		"docker":  jobCTX.Docker,
-		"job_id":  jobCTX.JobID,
-		//"tag":     jobCTX.Tag,
-		"version": Version,
-	})
-
-	logger.LogxWithFields("debug", fmt.Sprintf("Beginning backup job via %s", jobCTX.TargetDir), verboseFields)
-
-	// declare target base name for metrics and logging tracking
-	targetBaseName := filepath.Base(targetPath)
-
-	// handle pre-backup docker tasks
-	if dockerEnabled {
-		if err := backup.HandleDockerPreBackup(&jobCTX, composeFilePath, targetBaseName); err != nil {
-			logger.LogxWithFields("fatal", fmt.Sprintf("Failure to perform pre-snapshot docker tasks: %v", err), fatalFields)
-		}
-	}
-
-	// attempt compression of data; if fail && dockerEnabled then attempt to handle docker restart
-	if err := backup.ShellCompressDirectory(&jobCTX, targetPath, backupFilePath); err != nil {
-
-		// if docker restart fails, log error
-		if dockerEnabled {
-			if dockererr := backup.HandleDockerPostBackup(&jobCTX, composeFilePath, *restartDockerBool); dockererr != nil {
-				logger.LogxWithFields("error", fmt.Sprintf("Failure to handle docker compose after backup: %v", dockererr), coreFields)
-			}
-		}
-
-		logger.LogxWithFields("fatal", fmt.Sprintf("Failure to compress target: %v", err), fatalFields)
-	}
-
-	// handle remote transfer
-	if *remoteHost != "" {
-		err := backup.HandleRemoteTransfer(&jobCTX, backupFilePath, inputCTX)
-		if err != nil {
-			// if remote fail, then remove tempfile when skipLocal enabled
-			if *skipLocal {
-				util.RemoveTempFile(&jobCTX, backupFilePath)
-				logger.LogxWithFields("debug", fmt.Sprintf("Removing local tempfile %s", backupFilePath), verboseFields)
-
-			}
-
-			// if remote fail, then handle post-backup docker jobs
-			if dockerEnabled {
-				if err := backup.HandleDockerPostBackup(&jobCTX, composeFilePath, *restartDockerBool); err != nil {
-					logger.LogxWithFields("fatal", fmt.Sprintf("Failure to reinitialize docker service after failed transfer: %v", err), fatalFields)
-				}
-			}
-			logger.LogxWithFields("error", fmt.Sprintf("Failure to complete remote transfer: %v", err), verboseFields)
-		}
-	}
-
-	//<section>   Post Backup/Restarts
-	//------------
-
-	// handle docker post backup
-	if dockerEnabled {
-		if err := backup.HandleDockerPostBackup(&jobCTX, composeFilePath, *restartDockerBool); err != nil {
-			logger.LogxWithFields("error", fmt.Sprintf("Failure to restart docker service: %v", err), coreFields)
-		}
-	}
-
-	// job completion banner & time calculation
-	jobDuration := time.Since(jobCTX.StartTime)
-	executionSeconds := jobDuration.Seconds()
-
-	logger.LogxWithFields("info", fmt.Sprintf("Job success, execution time: %.2fs", executionSeconds), map[string]interface{}{
-		"package":  "main",
-		"target":   jobCTX.Target,
-		"remote":   jobCTX.Remote,
-		"docker":   jobCTX.Docker,
-		"job_id":   jobCTX.JobID,
-		"duration": fmt.Sprintf("%.2fs", executionSeconds),
-		"success":  true,
-		"size":     jobCTX.CompressedSizeMBString,
-	})
-	logger.LogxWithFields("info", " --------------------------------------------------- ", map[string]interface{}{
-		"package":    "spacer",
-		"end_job_id": jobCTX.JobID,
-	})
 }

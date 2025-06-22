@@ -43,12 +43,6 @@ func InitEnvironment(configFile ConfigFile) (string, string, string, string, str
 		log.Fatalf("ERR: Error creating directory %s: %v", cargoportKeys, err)
 	}
 
-	// set 777 on /var/cargoport/remote for all users to access
-	err = util.RunCommand("chmod", "-R", "777", cargoportRemote)
-	if err != nil {
-		log.Fatalf("ERR: Error setting %s permissions for remotewrite: %v", cargoportRemote, err)
-	}
-
 	// initialize logging
 	logFilePath := logger.InitLogging(cargoportBase, configFile.LogLevel, configFile.LogFormat, configFile.LogTextColour)
 

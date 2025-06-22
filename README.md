@@ -163,7 +163,7 @@ Copy SSH Key to remote machine
 Compress a copy of target directory's data, storing it in the default local backup location
 ```shell
 # Compresses `/home/agriffin/foobar/` to `/$CARGOPORT/local/foorbar.bak.tar.gz`
-·> cargoport -target-dir=/home/agriffin/foobar
+·> cargoport -target-dir=/home/agriffin/foobar -tag="identifying-text"
 ```
 
 Perform backup on target directory, storing in a custom path locally, as well as remote transferring the backup to a remote machine
@@ -220,6 +220,18 @@ Backup based on container name, remote send to another machine
 ```
 
 ## Extra
+
+### Cargoport /remote directory usage
+By default, remote transfers will result in your backupfile being stored in the remote user's home directory, but if you have Cargoport installed on both host machine then you can optionally utilize Cargoport's `/remote` directory by specifying as such in the `config.yml` file and ensuring the intended SSH user on the remote machine has write access to their `/remote` directory:
+
+```shell
+> sudo chown someuser:someuser /var/cargoport/remote
+```
+
+You will now able to specify using `/var/cargoport/remote` on the remote host for a backup transfer
+
+
+### Viewing output filesizes or Cargoport total directory volume
 
 To view the saved filesizes of your storage paths and the new backup file, use `du -sh`
 ```shell
