@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.94.0] - 2025-6-21
+- Total job handling and packaging overhaul
+- More robust logic surrounding configfile interpretation
+- Can now set default output dir to elsewhere on the system rather than inside the cargoport rootdir
+
+## [0.93.3] - 2025-6-19
+- Input & configfile validations overhauls
+- Global packaging updates
+- Improved overrides & logic flow for overall program input 
+
 ## [0.93.0] - 2025-6-9
 - Added structured logging
 - Added job contexts
