@@ -202,6 +202,14 @@ log_format: text        # 'json' or 'text'
 # if 'text' format, logs will utilize ANSI codes for colouring
 # great for readability, but makes casual log grepping harder without using looser matches
 log_text_format_colouring: true
+
+# [ METRICS ] 
+# Allow cargoport to run a prometheus metrics endpoint
+# This endpoint is available for 60 seconds after each run, and can be polled during this time
+enable_metrics: false
+listen_address: 127.0.0.1
+listen_port: 9101
+listen_duration: 60
 `, rootDir, rootDir, rootDir, rootDir)
 
 	// Write default config file

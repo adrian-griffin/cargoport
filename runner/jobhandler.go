@@ -30,7 +30,7 @@ func jobhandlerLogDebugFields(context *job.JobContext) map[string]interface{} {
 	return fields
 }
 
-func RunJob(inputctx *input.InputContext) error {
+func RunJob(inputctx *input.InputContext) (duration float64, size int64, err error) {
 	// generate job ID & populate jobcontext
 	jobID := job.GenerateJobID()
 
@@ -60,7 +60,7 @@ func RunJob(inputctx *input.InputContext) error {
 	// resolve target dir intended for backup
 	composeFilePath, outputFilePath, err := backup.ResolveTarget(inputctx, &jobCTX)
 	if err != nil {
-		return fmt.Errorf("error determining intended backup target: %v", err)
+		return 0, 0, fmt.Errorf("error determining intended backup target: %v", err)
 	}
 
 	// define jobhandler logging
@@ -86,7 +86,7 @@ func RunJob(inputctx *input.InputContext) error {
 	if jobCTX.Docker {
 		if err := backup.HandleDockerPreBackup(&jobCTX, composeFilePath, targetBaseName); err != nil {
 			logger.LogxWithFields("error", fmt.Sprintf("error performing pre-snapshot docker tasks: %v", err), coreFields)
-			return err
+			return 0, 0, err
 		}
 	}
 
@@ -97,12 +97,12 @@ func RunJob(inputctx *input.InputContext) error {
 		if jobCTX.Docker {
 			if dockererr := backup.HandleDockerPostBackup(&jobCTX, composeFilePath, jobCTX.RestartDocker); dockererr != nil {
 				logger.LogxWithFields("error", fmt.Sprintf("error handling docker compose after backup: %v", dockererr), coreFields)
-				return err
+				return 0, 0, err
 			}
 		}
 
 		logger.LogxWithFields("error", fmt.Sprintf("error compressing target: %v", err), coreFields)
-		return err
+		return 0, 0, err
 	}
 
 	// handle remote transfer
@@ -120,11 +120,11 @@ func RunJob(inputctx *input.InputContext) error {
 			if jobCTX.Docker {
 				if err := backup.HandleDockerPostBackup(&jobCTX, composeFilePath, jobCTX.RestartDocker); err != nil {
 					logger.LogxWithFields("error", fmt.Sprintf("error reinitializing docker service after failed transfer: %v", err), coreFields)
-					return err
+					return 0, 0, err
 				}
 			}
 			logger.LogxWithFields("error", fmt.Sprintf("error completing remote transfer: %v", err), verboseFields)
-			return err
+			return 0, 0, err
 		}
 	}
 
@@ -132,7 +132,7 @@ func RunJob(inputctx *input.InputContext) error {
 	if jobCTX.Docker {
 		if err := backup.HandleDockerPostBackup(&jobCTX, composeFilePath, jobCTX.RestartDocker); err != nil {
 			logger.LogxWithFields("error", fmt.Sprintf("error restarting docker service: %v", err), coreFields)
-			return err
+			return 0, 0, err
 		}
 	}
 
@@ -155,6 +155,6 @@ func RunJob(inputctx *input.InputContext) error {
 		"end_job_id": jobCTX.JobID,
 	})
 
-	return nil
+	return executionSeconds, jobCTX.CompressedSizeBytesInt, nil
 
 }

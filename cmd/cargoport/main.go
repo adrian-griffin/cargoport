@@ -8,11 +8,13 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/adrian-griffin/cargoport/input"
 	"github.com/adrian-griffin/cargoport/job"
 	"github.com/adrian-griffin/cargoport/logger"
 	"github.com/adrian-griffin/cargoport/meta"
+	"github.com/adrian-griffin/cargoport/metrics"
 	"github.com/adrian-griffin/cargoport/runner"
 	"github.com/adrian-griffin/cargoport/util"
 )
@@ -208,7 +210,27 @@ func main() {
 		logger.Logx.Fatalf("Key validation error: %v", err)
 	}
 
-	if err := runner.RunJob(inputCTX); err != nil {
-		logger.Logx.Fatalf("Failure to complete job: %v", err)
+	metricData := metrics.NewMetrics()
+
+	// run backup job
+	duration, size, err := runner.RunJob(inputCTX)
+	if err != nil {
+		metricData.SetMetrics(false, 0, duration)
+		logger.Logx.Fatalf("Job failed: %v", err)
+	} else {
+		metricData.SetMetrics(true, size, duration)
 	}
+
+	// Optional metrics server if enabled via config
+	if inputCTX.Config.EnableMetrics {
+		address := inputCTX.Config.ListenAddress
+		socket := inputCTX.Config.ListenSocket
+		duration := inputCTX.Config.ListenDuration
+		logger.LogxWithFields("info", fmt.Sprintf("Starting metrics endpoint on %s:%s for %ds", address, socket, duration), map[string]interface{}{
+			"package": "main",
+		})
+		metrics.StartMetricsServer(fmt.Sprintf("%s:%s", address, socket), time.Duration(duration)*time.Second)
+
+	}
+
 }

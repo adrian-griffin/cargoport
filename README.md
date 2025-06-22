@@ -214,9 +214,12 @@ Backup based on container name, remote send to another machine
 # m h  dom mon dow   command
 # . . .
 ## Perform local backup on docker container every night at 1:00 AM
-0 1 * * * /usr/local/bin/cargoport -target-dir=/srv/docker/<dockername>
-## Perform remote & local backup on target dockername every Monday at 3:10 AM (defaults to /home/agriffin/vaultwarden.bak.tar.gz on remote)
-10 3 * * MON /usr/local/bin/cargoport -docker-name=vaultwarden -remote-host=10.0.0.1 -remote-user=agriffin
+0 1 * * * cargoport -target-dir=/opt/docker/<dockername>
+## Remote + local backup on target dockername every Monday at 3:10 AM
+10 3 * * MON cargoport -docker-name=<dockername> -remote-host=10.0.0.1 -remote-user=agriffin
+## Back up container twice per month, one remote copy, on local copy on a staggered schedule
+0 2 10 * * cargoport -target-dir=/opt/docker/<dockername> -remote-send-defaults
+0 2 25 * * cargoport -target-dir=/opt/docker/<dockername> -tag="staggered"
 ```
 
 ## Extra

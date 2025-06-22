@@ -26,6 +26,10 @@ type ConfigFile struct {
 	LogLevel            string `yaml:"log_level"`
 	LogFormat           string `yaml:"log_format"`
 	LogTextColour       bool   `yaml:"log_text_format_colouring"`
+	EnableMetrics       bool   `yaml:"enable_metrics"`
+	ListenAddress       string `yaml:"listen_address"`
+	ListenSocket        string `yaml:"listen_port"`
+	ListenDuration      int    `yaml:"listen_duration"`
 }
 
 // system-wide config reference path
@@ -113,6 +117,11 @@ func LoadConfigFile() (*ConfigFile, error) {
 	if config.RemoteUser == "" {
 		return nil, fmt.Errorf("invalid `default_remote_user` in configfile")
 	}
+
+	// if metrics enabled then validate IP & port
+	//if config.EnableMetrics {
+
+	//}
 
 	// validate log_level
 	// warn if invalid, default to "info"

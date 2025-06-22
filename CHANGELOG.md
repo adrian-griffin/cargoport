@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.95.3] - 2025-6-21
+- Added /metrics endpoint for polling basic data
+
 ## [0.94.0] - 2025-6-21
 - Total job handling and packaging overhaul
 - More robust logic surrounding configfile interpretation
