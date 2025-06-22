@@ -214,16 +214,21 @@ func main() {
 
 	// run backup job
 	if jobctx, err := runner.RunJob(inputCTX); err != nil {
-		metricData.SetMetrics(false, 0, 0)
+		metricData.SetBaseMetrics(false, 0, 0)
 		logger.Logx.Errorf("Job failed: %v", err)
 	} else {
 		outputSize := jobctx.CompressedSizeBytesInt
 		jobDuration := jobctx.JobDuration
-		metricData.SetMetrics(true, outputSize, jobDuration)
+		metricData.SetBaseMetrics(true, outputSize, jobDuration)
 	}
 
 	// Optional metrics server if enabled via config
 	if inputCTX.Config.EnableMetrics {
+
+		metricData.SetLocalDirSize(inputCTX.DefaultOutputDir)
+		metricData.SetRemoteDirSize(filepath.Join(inputCTX.RootDir, "/remote"))
+		metricData.SetLocalFileCount(inputCTX.DefaultOutputDir)
+
 		listenAddress := inputCTX.Config.ListenAddress
 		listenSocket := inputCTX.Config.ListenSocket
 		listenDuration := inputCTX.Config.ListenDuration

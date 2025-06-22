@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/adrian-griffin/cargoport/job"
 	"github.com/adrian-griffin/cargoport/logger"
@@ -91,4 +92,32 @@ func ValidateDirectoryWriteable(directoryPathString string) error {
 	os.Remove(testFilePath)
 
 	return nil
+}
+
+func GetDirectorySize(path string) (int64, error) {
+	var total int64
+	err := filepath.Walk(path, func(_ string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err // propagate error
+		}
+		if !info.IsDir() {
+			total += info.Size()
+		}
+		return nil
+	})
+	return total, err
+}
+
+func GetTarballCount(path string) (int, error) {
+	count := 0
+	err := filepath.Walk(path, func(_ string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() && strings.HasSuffix(info.Name(), ".bak.tar.gz") {
+			count++
+		}
+		return nil
+	})
+	return count, err
 }
