@@ -13,6 +13,7 @@ import (
 
 type ConfigFile struct {
 	DefaultCargoportDir string `yaml:"default_cargoport_directory"`
+	DefaultOutputDir    string `yaml:"default_output_directory"`
 	SkipLocal           bool   `yaml:"skip_local_backups"`
 	RemoteUser          string `yaml:"default_remote_user"`
 	RemoteHost          string `yaml:"default_remote_host"`
@@ -72,12 +73,20 @@ func LoadConfigFile() (*ConfigFile, error) {
 	}
 
 	//> CFG FILE VALIDATIONS
-	// validate that default_cargoport_directory is defined & valid
+	// validate that default config dir is defined & valid
 	if config.DefaultCargoportDir == "" {
 		return nil, fmt.Errorf("missing required config: default_cargoport_directory")
 	}
 	if err := util.ValidateDirectoryString(config.DefaultCargoportDir); err != nil {
 		return nil, fmt.Errorf("invalid required config: default_cargoport_directory: %v", err)
+	}
+
+	// validate that default output dir is defined and valid
+	if config.DefaultOutputDir == "" {
+		return nil, fmt.Errorf("missing required config: default_output_directory")
+	}
+	if err := util.ValidateDirectoryString(config.DefaultOutputDir); err != nil {
+		return nil, fmt.Errorf("invalid required config: default_output_directory: %v", err)
 	}
 
 	// validate that SSH keydir is not empty, is valid, and writeable

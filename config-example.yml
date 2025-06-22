@@ -1,6 +1,7 @@
 # [ LOCAL DEFAULTS ]
-## Please only change this default directory using -setup flag
+## For your convenience, only change the default_cargoport_directory using the -setup flag
 default_cargoport_directory: /var/cargoport
+default_output_directory: /var/cargoport/local
 
 ## Skip all local backups from this machine by default, requires remote flags
 skip_local_backups: false
@@ -9,18 +10,18 @@ skip_local_backups: false
 default_remote_user: admin
 default_remote_host: 10.0.0.1
 
-# If cargoport is also set up on the remote target machine(s), you may want use this!
+# If cargoport is also set up on the remote target machine(s), you may want to use this!
 #   Otherwise use the default ~/ output
-default_remote_output_dir: /var/cargoport/remote
-#default_remote_output_dir: ~/
+#default_remote_output_dir: /var/cargoport/remote
+default_remote_output_dir: ~/
 
 # [ NETWORK SETTINGS ]
 # These tests run before every remote transfer
-# If you enable SSH tests, you will be prompted for the remote password twice unless you copy the SSH key
+# If you enable SSH tests, you will be prompted for the remote password twice until you copy the SSH key
 icmp_test: true
 ssh_test: false
 
-# [ KEYTOOL DEFAULTS ]
+# [ SSH KEYTOOL DEFAULTS ]
 ssh_key_directory: /var/cargoport/keys
 ssh_private_key_name: cargoport-id-ed25519
 

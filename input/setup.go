@@ -171,8 +171,9 @@ func SetupTool() {
 func createDefaultConfig(configFilePath, rootDir string) error {
 	// Template for default config.yml
 	defaultConfig := fmt.Sprintf(`# [ LOCAL DEFAULTS ]
-## Please only change this default directory using -setup flag
+## For your convenience, only change the default_cargoport_directory using the -setup flag
 default_cargoport_directory: %s
+default_output_directory: %s/local
 
 ## Skip all local backups from this machine by default, requires remote flags
 skip_local_backups: false
@@ -181,18 +182,18 @@ skip_local_backups: false
 default_remote_user: admin
 default_remote_host: 10.0.0.1
 
-# If cargoport is also set up on the remote target machine(s), you may want use this!
+# If cargoport is also set up on the remote target machine(s), you may want to use this!
 #   Otherwise use the default ~/ output
-default_remote_output_dir: %s/remote
-#default_remote_output_dir: ~/
+#default_remote_output_dir: %s/remote
+default_remote_output_dir: ~/
 
 # [ NETWORK SETTINGS ]
 # These tests run before every remote transfer
-# If you enable SSH tests, you will be prompted for the remote password twice unless you copy the SSH key
+# If you enable SSH tests, you will be prompted for the remote password twice until you copy the SSH key
 icmp_test: true
 ssh_test: false
 
-# [ util DEFAULTS ]
+# [ SSH KEYTOOL DEFAULTS ]
 ssh_key_directory: %s/keys
 ssh_private_key_name: cargoport-id-ed25519
 
@@ -207,7 +208,7 @@ log_format: text        # 'json' or 'text'
 # if 'text' format, logs will utilize ANSI codes for colouring
 # great for readability, but makes casual log grepping harder without using looser matches
 log_text_format_colouring: true
-`, rootDir, rootDir, rootDir)
+`, rootDir, rootDir, rootDir, rootDir)
 
 	// Write default config file
 	return os.WriteFile(configFilePath, []byte(defaultConfig), 0644)

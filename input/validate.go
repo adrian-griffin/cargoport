@@ -2,30 +2,33 @@ package input
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/adrian-griffin/cargoport/util"
 )
 
 // input struct to format final config + input outcomes
 type InputContext struct {
-	TargetDir       string
-	DockerName      string
-	OutputDir       string
-	RestartDocker   bool
-	SkipLocal       bool
-	RemoteUser      string
-	RemoteHost      string
-	RemoteOutputDir string
-	SendDefaults    bool
-	Tag             string
-	CopySSHKey      bool
-	GenerateSSHKey  bool
+	TargetDir        string
+	DockerName       string
+	OutputDir        string
+	RestartDocker    bool
+	SkipLocal        bool
+	RemoteUser       string
+	RemoteHost       string
+	RemoteOutputDir  string
+	SendDefaults     bool
+	Tag              string
+	CopySSHKey       bool
+	GenerateSSHKey   bool
+	RootDir          string
+	DefaultOutputDir string
 
 	Config *ConfigFile
 }
 
 // finalize merges config defaults and validates all input.
-func Finalize(ic *InputContext) error {
+func ValidateInputs(ic *InputContext) error {
 	cfg := ic.Config
 
 	// if ssh copykey bool then ensure both remote vars are set (explicit only)
@@ -60,6 +63,15 @@ func Finalize(ic *InputContext) error {
 	// fallback remoteOutputDir if still unset
 	if ic.RemoteOutputDir == "" && cfg.RemoteOutputDir != "" {
 		ic.RemoteOutputDir = cfg.RemoteOutputDir
+	}
+
+	// fallback to configfile default output dir if custom output not defined
+	if ic.OutputDir == "" {
+		ic.OutputDir = cfg.DefaultOutputDir
+	}
+	// if skiplocal then override all output dirs & use os.tmp
+	if ic.SkipLocal {
+		ic.OutputDir = os.TempDir()
 	}
 
 	// validate target

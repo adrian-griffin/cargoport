@@ -8,7 +8,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/adrian-griffin/cargoport/backup"
@@ -18,7 +17,7 @@ import (
 	"github.com/adrian-griffin/cargoport/util"
 )
 
-const Version = "v0.93.4"
+const Version = "v0.93.6"
 const motd = "kind words cost nothing <3"
 
 // debug level logging output fields for main package
@@ -160,30 +159,25 @@ func main() {
 	// init logging
 	logger.InitLogging(configFile.DefaultCargoportDir, configFile.LogLevel, configFile.LogFormat, configFile.LogTextColour)
 
-	// determine local rootdir
-	cargoportLocal := filepath.Join(strings.TrimSuffix(configFile.DefaultCargoportDir, "/"), "local")
-	if err := util.ValidateDirectoryString(cargoportLocal); err != nil {
-		logger.Logx.Fatalf("Local cargoport directory missing or unreadable: %v", err)
-	}
-
 	// build input context
 	inputCTX := &input.InputContext{
-		TargetDir:       *targetDir,
-		DockerName:      *dockerName,
-		OutputDir:       *localOutputDir,
-		RestartDocker:   *restartDockerBool,
-		SkipLocal:       *skipLocal,
-		RemoteUser:      *remoteUser,
-		RemoteHost:      *remoteHost,
-		RemoteOutputDir: *remoteOutputDir,
-		SendDefaults:    *sendDefaults,
-		Tag:             *tagOutputString,
-		CopySSHKey:      *copySSHKeyBool,
-		GenerateSSHKey:  *newSSHKeyBool,
-		Config:          configFile,
+		TargetDir:        *targetDir,
+		DockerName:       *dockerName,
+		OutputDir:        *localOutputDir,
+		RestartDocker:    *restartDockerBool,
+		SkipLocal:        *skipLocal,
+		RemoteUser:       *remoteUser,
+		RemoteHost:       *remoteHost,
+		RemoteOutputDir:  *remoteOutputDir,
+		SendDefaults:     *sendDefaults,
+		Tag:              *tagOutputString,
+		CopySSHKey:       *copySSHKeyBool,
+		GenerateSSHKey:   *newSSHKeyBool,
+		DefaultOutputDir: configFile.DefaultCargoportDir,
+		Config:           configFile,
 	}
 	// interpret flags & handle config overrides
-	if err := input.Finalize(inputCTX); err != nil {
+	if err := input.ValidateInputs(inputCTX); err != nil {
 		logger.LogxWithFields("fatal", fmt.Sprintf("Failure to parse input: %v", err), map[string]interface{}{
 			"package": "main",
 			"target":  filepath.Base(*targetDir),
@@ -228,7 +222,7 @@ func main() {
 		JobID:                  jobID,
 		StartTime:              time.Now(), // begin timer now
 		TargetDir:              "",
-		RootDir:                cargoportLocal,
+		RootDir:                inputCTX.DefaultOutputDir,
 		Tag:                    inputCTX.Tag,
 		RestartDocker:          inputCTX.RestartDocker,
 		RemoteHost:             string(inputCTX.RemoteHost),
@@ -258,12 +252,12 @@ func main() {
 	jobCTX.TargetDir = targetPath
 
 	// prepare local backupfile & compose
-	backupFilePath, err := backup.PrepareBackupFilePath(&jobCTX, cargoportLocal, targetPath, *localOutputDir, *tagOutputString, *skipLocal)
+	backupFilePath, err := backup.PrepareBackupFilePath(&jobCTX, inputCTX)
 	if err != nil {
 		logger.LogxWithFields("fatal", fmt.Sprintf("Failure to determine output path: %v", err), map[string]interface{}{
 			"package":  "main",
 			"target":   filepath.Base(targetPath),
-			"root_dir": cargoportLocal,
+			"root_dir": inputCTX.DefaultOutputDir,
 		})
 	}
 

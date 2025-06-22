@@ -1,10 +1,7 @@
 package backup
 
 import (
-	"archive/tar"
-	"compress/gzip"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -16,12 +13,12 @@ import (
 )
 
 // debug level logging output fields for backup package
-func backupLogBaseFields(context job.JobContext) map[string]interface{} {
-	coreFields := logger.CoreLogFields(&context, "backup")
+func backupLogBaseFields(jobctx job.JobContext) map[string]interface{} {
+	coreFields := logger.CoreLogFields(&jobctx, "backup")
 	fields := logger.MergeFields(coreFields, map[string]interface{}{
-		"skip_local": context.SkipLocal,
-		"target_dir": context.TargetDir,
-		"tag":        context.Tag,
+		"skip_local": jobctx.SkipLocal,
+		"target_dir": jobctx.TargetDir,
+		"tag":        jobctx.Tag,
 	})
 	return fields
 }
@@ -92,19 +89,21 @@ func DetermineBackupTarget(jobctx *job.JobContext, inputcxt *input.InputContext)
 }
 
 // determines path for new backupfile based on user input
-func PrepareBackupFilePath(jobctx *job.JobContext, localBackupDir, targetDir, customOutputDir, tagOutputString string, skipLocal bool) (string, error) {
+func PrepareBackupFilePath(jobctx *job.JobContext, inputctx *input.InputContext) (string, error) {
 
 	// defining logging fields
 	verboseFields := backupLogBaseFields(*jobctx)
 	// coreFields := logger.CoreLogFields(context, "backup")
 
 	// sanitize target directory suffix
-	targetDir = strings.TrimSuffix(targetDir, "/")
+	targetDir := strings.TrimSuffix(inputctx.TargetDir, "/")
 	baseName := filepath.Base(targetDir)
 
+	var tagOutputString = ""
+
 	// if output file tag is not emty, prepend it with a `-`
-	if tagOutputString != "" {
-		tagOutputString = "-" + tagOutputString
+	if inputctx.Tag != "" {
+		tagOutputString = "-" + inputctx.Tag
 	}
 
 	// validate that targetDir exists prior to continuing
@@ -119,16 +118,9 @@ func PrepareBackupFilePath(jobctx *job.JobContext, localBackupDir, targetDir, cu
 	}
 
 	backupFileName := baseName + tagOutputString + ".bak.tar.gz"
-	var filePathString string
 
-	switch {
-	case customOutputDir != "": // if custom output dir is not empty, make custom dir the target
-		filePathString = filepath.Join(customOutputDir, backupFileName)
-	case skipLocal: // if skip local enabled, create tempfile in the os's temp dir
-		filePathString = filepath.Join(os.TempDir(), backupFileName)
-	default: // otherwise use default cargoport local dir
-		filePathString = filepath.Join(localBackupDir, backupFileName)
-	}
+	// form output filepath using input's defined outputdir & filename
+	filePathString := filepath.Join(inputctx.OutputDir, backupFileName)
 
 	// validate that files can be written in target output dir
 	if err := ValidateBackupFilePath(filePathString); err != nil {
@@ -157,134 +149,11 @@ func ValidateBackupFilePath(backupFilePath string) error {
 	return nil
 }
 
-// compresses target directory into output file tarball usin Go
-func CompressDirectory(context *job.JobContext, targetDir, outputFile string) error {
-
-	// defining logging fields
-	verboseFields := backupLogBaseFields(*context)
-	// coreFields := logger.CoreLogFields(context, "backup")
-
-	// compress target directory
-	logger.LogxWithFields("debug", fmt.Sprintf("Compressing target directory %s to %s", targetDir, outputFile), verboseFields)
-
-	// ensure base dir is valid
-	fi, err := os.Stat(targetDir)
-	if err != nil {
-		return fmt.Errorf("invalid target directory %s: %v", targetDir, err)
-	}
-	if !fi.IsDir() {
-		return fmt.Errorf("path %s is not a directory", targetDir)
-	}
-
-	// create output file
-	out, err := os.Create(outputFile)
-	if err != nil {
-		return fmt.Errorf("failed to create tarball file %s: %v", outputFile, err)
-	}
-	defer out.Close()
-
-	// wrap outputfile with gzip writer
-	gzWriter := gzip.NewWriter(out)
-	defer gzWriter.Close()
-
-	// create tar writer
-	tarWriter := tar.NewWriter(gzWriter)
-	defer tarWriter.Close()
-
-	// store directory to create relative file names
-	basePath := filepath.Dir(targetDir)
-
-	// walk the directory recursively
-	walkPath := targetDir
-	err = filepath.Walk(walkPath, func(filePath string, info os.FileInfo, walkErr error) error {
-		if walkErr != nil {
-			return walkErr
-		}
-
-		// build relative path to root for directory structure
-		relPath, err := filepath.Rel(basePath, filePath)
-		if err != nil {
-			return err
-		}
-
-		// if dir, only write a header with no file contents
-		if info.IsDir() {
-			hdr := &tar.Header{
-				Name:     relPath + "/",
-				Mode:     int64(info.Mode()),
-				Typeflag: tar.TypeDir,
-				ModTime:  info.ModTime(),
-			}
-			return tarWriter.WriteHeader(hdr)
-		}
-		// otherwise, it's a file or symlink
-		// create a new tar header based on file info
-		header, err := tar.FileInfoHeader(info, info.Name())
-		if err != nil {
-			return err
-		}
-
-		// insert relative path for Name field
-		header.Name = relPath
-
-		// write the header
-		if err := tarWriter.WriteHeader(header); err != nil {
-			return err
-		}
-
-		// if it's a regular file, copy its contents
-		if info.Mode().IsRegular() {
-			file, err := os.Open(filePath)
-			if err != nil {
-				return err
-			}
-			defer file.Close()
-
-			// copy the file data into the tar
-			_, err = io.Copy(tarWriter, file)
-			if err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-	if err != nil {
-		// if error during walk or tar writing, clean partial file
-		os.Remove(outputFile)
-		return fmt.Errorf("failed while building tarball: %v", err)
-	}
-
-	// force flush and close writers
-	if err := tarWriter.Close(); err != nil {
-		return fmt.Errorf("tar writer close error: %v", err)
-	}
-	if err := gzWriter.Close(); err != nil {
-		return fmt.Errorf("gzip writer close error: %v", err)
-	}
-	if err := out.Close(); err != nil {
-		return fmt.Errorf("output file close error: %v", err)
-	}
-
-	// print to cli & log to logfile regarding successful directory compression
-	logger.LogxWithFields("debug", fmt.Sprintf("Contents of %s successfully compressed to %s", targetDir, outputFile), verboseFields)
-
-	// basic info output
-	logger.LogxWithFields("info", "Successfully compressed target data", map[string]interface{}{
-		"package":    "backup",
-		"skip_local": context.SkipLocal,
-		"target":     context.Target,
-		"target_dir": context.TargetDir,
-		"job_id":     context.JobID,
-		"tag":        context.Tag,
-	})
-	return nil
-}
-
 // shells out to cli to compresses target directory into output file tarball
-func ShellCompressDirectory(context *job.JobContext, targetDir, outputFile string) error {
+func ShellCompressDirectory(jobctx *job.JobContext, targetDir, outputFile string) error {
 
 	// defining logging fields
-	verboseFields := backupLogBaseFields(*context)
+	verboseFields := backupLogBaseFields(*jobctx)
 	// coreFields := logger.CoreLogFields(context, "backup")
 
 	// compress target directory
@@ -321,24 +190,24 @@ func ShellCompressDirectory(context *job.JobContext, targetDir, outputFile strin
 	if err != nil {
 		return fmt.Errorf("error gathering output file info: %v", err)
 	}
-	context.CompressedSizeBytesInt = fileInfo.Size()
-	context.CompressedSizeMBString = fmt.Sprintf("%.2f MB", float64(context.CompressedSizeBytesInt)/1024.0/1024.0)
+	jobctx.CompressedSizeBytesInt = fileInfo.Size()
+	jobctx.CompressedSizeMBString = fmt.Sprintf("%.2f MB", float64(jobctx.CompressedSizeBytesInt)/1024.0/1024.0)
 
 	// print to cli & log to logfile regarding successful directory compression
-	logger.LogxWithFields("debug", fmt.Sprintf("Contents of %s successfully compressed to %s, output filesize: %s", targetDir, outputFile, context.CompressedSizeMBString), logger.MergeFields(verboseFields, map[string]interface{}{
-		"size":       context.CompressedSizeMBString,
-		"size_bytes": context.CompressedSizeBytesInt,
+	logger.LogxWithFields("debug", fmt.Sprintf("Contents of %s successfully compressed to %s, output filesize: %s", targetDir, outputFile, jobctx.CompressedSizeMBString), logger.MergeFields(verboseFields, map[string]interface{}{
+		"size":       jobctx.CompressedSizeMBString,
+		"size_bytes": jobctx.CompressedSizeBytesInt,
 	}))
 
 	// basic info output
 	logger.LogxWithFields("info", "Successfully compressed target data", map[string]interface{}{
 		"package":    "backup",
-		"docker":     context.Docker,
-		"target":     context.Target,
-		"target_dir": context.TargetDir,
-		"job_id":     context.JobID,
-		"tag":        context.Tag,
-		"size":       context.CompressedSizeMBString,
+		"docker":     jobctx.Docker,
+		"target":     jobctx.Target,
+		"target_dir": jobctx.TargetDir,
+		"job_id":     jobctx.JobID,
+		"tag":        jobctx.Tag,
+		"size":       jobctx.CompressedSizeMBString,
 	})
 
 	return nil
