@@ -213,23 +213,24 @@ func main() {
 	metricData := metrics.NewMetrics()
 
 	// run backup job
-	duration, size, err := runner.RunJob(inputCTX)
-	if err != nil {
-		metricData.SetMetrics(false, 0, duration)
-		logger.Logx.Fatalf("Job failed: %v", err)
+	if jobctx, err := runner.RunJob(inputCTX); err != nil {
+		metricData.SetMetrics(false, 0, 0)
+		logger.Logx.Errorf("Job failed: %v", err)
 	} else {
-		metricData.SetMetrics(true, size, duration)
+		outputSize := jobctx.CompressedSizeBytesInt
+		jobDuration := jobctx.JobDuration
+		metricData.SetMetrics(true, outputSize, jobDuration)
 	}
 
 	// Optional metrics server if enabled via config
 	if inputCTX.Config.EnableMetrics {
-		address := inputCTX.Config.ListenAddress
-		socket := inputCTX.Config.ListenSocket
-		duration := inputCTX.Config.ListenDuration
-		logger.LogxWithFields("info", fmt.Sprintf("Starting metrics endpoint on %s:%s for %ds", address, socket, duration), map[string]interface{}{
+		listenAddress := inputCTX.Config.ListenAddress
+		listenSocket := inputCTX.Config.ListenSocket
+		listenDuration := inputCTX.Config.ListenDuration
+		logger.LogxWithFields("info", fmt.Sprintf("Starting metrics endpoint on %s:%s for %ds", listenAddress, listenSocket, listenDuration), map[string]interface{}{
 			"package": "main",
 		})
-		metrics.StartMetricsServer(fmt.Sprintf("%s:%s", address, socket), time.Duration(duration)*time.Second)
+		metrics.StartMetricsServer(fmt.Sprintf("%s:%s", listenAddress, listenSocket), time.Duration(listenDuration)*time.Second)
 
 	}
 

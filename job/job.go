@@ -23,6 +23,7 @@ type JobContext struct {
 	RemoteUser             string
 	CompressedSizeBytesInt int64
 	CompressedSizeMBString string
+	JobDuration            float64
 }
 
 func GenerateJobID() string {
