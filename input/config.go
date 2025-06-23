@@ -12,24 +12,26 @@ import (
 )
 
 type ConfigFile struct {
-	DefaultCargoportDir string `yaml:"default_cargoport_directory"`
-	DefaultOutputDir    string `yaml:"default_output_directory"`
-	SkipLocal           bool   `yaml:"skip_local_backups"`
-	RemoteUser          string `yaml:"default_remote_user"`
-	RemoteHost          string `yaml:"default_remote_host"`
-	RemoteOutputDir     string `yaml:"default_remote_output_dir"`
-	Version             string `yaml:"version,omitempty"`
-	SSHKeyDir           string `yaml:"ssh_key_directory"`
-	SSHKeyName          string `yaml:"ssh_private_key_name"`
-	ICMPTest            bool   `yaml:"icmp_test"`
-	SSHTest             bool   `yaml:"ssh_test"`
-	LogLevel            string `yaml:"log_level"`
-	LogFormat           string `yaml:"log_format"`
-	LogTextColour       bool   `yaml:"log_text_format_colouring"`
-	EnableMetrics       bool   `yaml:"enable_metrics"`
-	ListenAddress       string `yaml:"listen_address"`
-	ListenSocket        string `yaml:"listen_port"`
-	ListenDuration      int    `yaml:"listen_duration"`
+	DefaultCargoportDir         string `yaml:"default_cargoport_directory"`
+	DefaultOutputDir            string `yaml:"default_output_directory"`
+	SkipLocal                   bool   `yaml:"skip_local_backups"`
+	RemoteUser                  string `yaml:"default_remote_user"`
+	RemoteHost                  string `yaml:"default_remote_host"`
+	RemoteOutputDir             string `yaml:"default_remote_output_dir"`
+	Version                     string `yaml:"version,omitempty"`
+	SSHKeyDir                   string `yaml:"ssh_key_directory"`
+	SSHKeyName                  string `yaml:"ssh_private_key_name"`
+	ICMPTest                    bool   `yaml:"icmp_test"`
+	SSHTest                     bool   `yaml:"ssh_test"`
+	LogLevel                    string `yaml:"log_level"`
+	LogFormat                   string `yaml:"log_format"`
+	LogTextColour               bool   `yaml:"log_text_format_colouring"`
+	MetricsDir                  string `yaml:"metrics_dir"`
+	PerJobMetricsServer         bool   `yaml:"per_job_metrics_server"`
+	ListenAddress               string `yaml:"listen_address"`
+	ListenSocket                string `yaml:"listen_port"`
+	ListenDuration              int    `yaml:"listen_duration"`
+	MetricsDaemonReloadInterval int    `yaml:"metrics_daemon_reload_interval`
 }
 
 // system-wide config reference path
@@ -119,7 +121,7 @@ func LoadConfigFile() (*ConfigFile, error) {
 	}
 
 	// if metrics enabled then validate IP & port
-	//if config.EnableMetrics {
+	//if config.PerJobMetricsServer {
 
 	//}
 

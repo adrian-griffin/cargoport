@@ -6,6 +6,8 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net"
+	"net/http"
 	"os"
 	"path/filepath"
 	"time"
@@ -17,6 +19,7 @@ import (
 	"github.com/adrian-griffin/cargoport/metrics"
 	"github.com/adrian-griffin/cargoport/runner"
 	"github.com/adrian-griffin/cargoport/util"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 // debug level logging output fields for main package
@@ -69,6 +72,9 @@ func main() {
 	// ssh key flags
 	newSSHKeyBool := flag.Bool("generate-keypair", false, "Generate new SSH key for cargoport")
 	copySSHKeyBool := flag.Bool("copy-key", false, "Copy cargoport SSH key to remote host")
+
+	// metrics flags
+	metricsDaemon := flag.Bool("metrics-daemon", false, "Run as a persistent headless metrics http endpoint for monitoring cargoport")
 
 	// custom help messaging
 	flag.Usage = func() {
@@ -172,6 +178,7 @@ func main() {
 		Tag:              *tagOutputString,
 		CopySSHKey:       *copySSHKeyBool,
 		GenerateSSHKey:   *newSSHKeyBool,
+		MetricsDaemon:    *metricsDaemon,
 		DefaultOutputDir: configFile.DefaultCargoportDir,
 		Config:           configFile,
 	}
@@ -210,30 +217,78 @@ func main() {
 		logger.Logx.Fatalf("Key validation error: %v", err)
 	}
 
-	metricData := metrics.NewMetrics()
+	if inputCTX.MetricsDaemon {
+
+		// spawn goroutine to reload from cache .json files to push new metrics updates to http interface
+		go func() {
+			ticker := time.NewTicker(inputCTX.Config.MetricsDaemonReloadInterval * time.Second)
+			defer ticker.Stop()
+
+			for {
+				select {
+				case <-ticker.C:
+					job, env, err := metrics.ReadJSONMetrics(configFile)
+					if err != nil {
+						logger.Logx.Errorf("Failed to reload metrics from JSON: %v", err)
+						continue
+					}
+					metrics.ApplyPrometheusMetrics(job, env)
+					//logger.Logx.Debugf("Reloaded metrics from disk")
+				}
+			}
+		}()
+
+		if err := metrics.LoadFromCacheAndExpose(configFile); err != nil {
+			logger.Logx.Fatalf("Failed to load metrics from cache: %v", err)
+		}
+
+		logger.Logx.Infof("Starting persistent metrics daemon at http://%s:%s/metrics", inputCTX.Config.ListenAddress, inputCTX.Config.ListenSocket)
+		http.Handle("/metrics", promhttp.Handler())
+		http.ListenAndServe(inputCTX.Config.ListenAddress+":"+inputCTX.Config.ListenSocket, nil)
+		return
+	}
+
+	// declare empty metrics structs
+	jobMetricsData := metrics.NewJobMetrics()
+	envMetricsData := metrics.NewEnvMetrics()
 
 	// run backup job
 	if jobctx, err := runner.RunJob(inputCTX); err != nil {
-		metricData.SetBaseMetrics(false, 0, 0)
+		jobMetricsData.SetLastJobMetrics(false, 0, 0)
 		logger.Logx.Errorf("Job failed: %v", err)
 	} else {
 		outputSize := jobctx.CompressedSizeBytesInt
 		jobDuration := jobctx.JobDuration
-		metricData.SetBaseMetrics(true, outputSize, jobDuration)
+		jobMetricsData.SetLastJobMetrics(true, outputSize, jobDuration)
 	}
 
-	// Optional metrics server if enabled via config
-	if inputCTX.Config.EnableMetrics {
+	// assign env metrics
+	envMetricsData.SetLocalDirSize(inputCTX.DefaultOutputDir)
+	envMetricsData.SetRemoteDirSize(filepath.Join(inputCTX.RootDir, "/remote"))
+	envMetricsData.SetLocalFileCount(inputCTX.DefaultOutputDir)
 
-		metricData.SetLocalDirSize(inputCTX.DefaultOutputDir)
-		metricData.SetRemoteDirSize(filepath.Join(inputCTX.RootDir, "/remote"))
-		metricData.SetLocalFileCount(inputCTX.DefaultOutputDir)
+	// write newly collected metrics to disk
+	metrics.WriteMetricsFiles(inputCTX.Config, *jobMetricsData, *envMetricsData)
 
+	// spin up metrics http server if enabled via config
+	if inputCTX.Config.PerJobMetricsServer {
+
+		// check if http listener already active via daemon process
 		listenAddress := inputCTX.Config.ListenAddress
 		listenSocket := inputCTX.Config.ListenSocket
+		endpointSocket := fmt.Sprintf("%s:%s", listenAddress, listenSocket)
+		ln, err := net.Listen("tcp", endpointSocket)
+		if err != nil {
+			logger.LogxWithFields("debug", fmt.Sprintf("Metrics endpoint already listening at %s, skipping temp prometheus server", endpointSocket), map[string]interface{}{
+				"package": "metrics",
+			})
+			return
+		}
+		ln.Close()
+
 		listenDuration := inputCTX.Config.ListenDuration
-		logger.LogxWithFields("info", fmt.Sprintf("Starting metrics endpoint on %s:%s for %ds", listenAddress, listenSocket, listenDuration), map[string]interface{}{
-			"package": "main",
+		logger.LogxWithFields("info", fmt.Sprintf("Starting metrics endpoint on http://%s:%s/metrics for %ds", listenAddress, listenSocket, listenDuration), map[string]interface{}{
+			"package": "metrics",
 		})
 		metrics.StartMetricsServer(fmt.Sprintf("%s:%s", listenAddress, listenSocket), time.Duration(listenDuration)*time.Second)
 

@@ -23,6 +23,7 @@ type InputContext struct {
 	GenerateSSHKey   bool
 	RootDir          string
 	DefaultOutputDir string
+	MetricsDaemon    bool
 
 	Config *ConfigFile
 }
@@ -42,6 +43,10 @@ func ValidateInputs(ic *InputContext) error {
 	}
 
 	if ic.GenerateSSHKey {
+		return nil
+	}
+
+	if ic.MetricsDaemon {
 		return nil
 	}
 

@@ -13,7 +13,7 @@ import (
 )
 
 // sets up cargoport parent dirs & logging
-func InitEnvironment(configFile ConfigFile) (string, string, string, string, string) {
+func InitEnvironment(configFile ConfigFile) (string, string, string, string, string, string) {
 	// initialize parent cargoport dirs on system
 	var err error
 
@@ -22,6 +22,7 @@ func InitEnvironment(configFile ConfigFile) (string, string, string, string, str
 	cargoportLocal := filepath.Join(cargoportBase, "/local")
 	cargoportRemote := filepath.Join(cargoportBase, "/remote")
 	cargoportKeys := filepath.Join(cargoportBase, "/keys")
+	cargoportMetrics := filepath.Join(cargoportBase, "/metrics")
 
 	// create /$CARGOPORT/
 	if err = os.MkdirAll(cargoportBase, 0755); err != nil {
@@ -43,10 +44,15 @@ func InitEnvironment(configFile ConfigFile) (string, string, string, string, str
 		log.Fatalf("ERR: Error creating directory %s: %v", cargoportKeys, err)
 	}
 
+	// create /$CARGOPORT/keys cargoportKeys
+	if err = os.MkdirAll(cargoportMetrics, 0755); err != nil {
+		log.Fatalf("ERR: Error creating directory %s: %v", cargoportKeys, err)
+	}
+
 	// initialize logging
 	logFilePath := logger.InitLogging(cargoportBase, configFile.LogLevel, configFile.LogFormat, configFile.LogTextColour)
 
-	return cargoportBase, cargoportLocal, cargoportRemote, logFilePath, cargoportKeys
+	return cargoportBase, cargoportLocal, cargoportRemote, logFilePath, cargoportKeys, cargoportMetrics
 }
 
 // guided setup tool for initial init
@@ -91,13 +97,14 @@ func SetupTool() {
 	}
 
 	// init env and determine directories & logfile
-	cargoportBase, cargoportLocal, cargoportRemote, logFilePath, cargoportKeys := InitEnvironment(configFile)
+	cargoportBase, cargoportLocal, cargoportRemote, logFilePath, cargoportKeys, cargoportMetrics := InitEnvironment(configFile)
 
-	fmt.Printf("Root directory initialized at: %s\n", cargoportBase)
-	fmt.Printf("Local backup directory: %s\n", cargoportLocal)
-	fmt.Printf("Remote backup directory: %s\n", cargoportRemote)
-	fmt.Printf("util storage: %s\n", cargoportKeys)
-	fmt.Printf("Log file initialized at: %s\n", logFilePath)
+	fmt.Printf("Root directory initialized at: %s", cargoportBase)
+	fmt.Printf("Local backup output directory: %s", cargoportLocal)
+	fmt.Printf("Remote inbound storage directory: %s", cargoportRemote)
+	fmt.Printf("SSH hey storage: %s", cargoportKeys)
+	fmt.Printf("Metrics storage: %s", cargoportMetrics)
+	fmt.Printf("Log file initialized at: %s", logFilePath)
 
 	fmt.Println(" ")
 	fmt.Println("------")
@@ -204,13 +211,20 @@ log_format: text        # 'json' or 'text'
 log_text_format_colouring: true
 
 # [ METRICS ] 
-# Allow cargoport to run a prometheus metrics endpoint
-# This endpoint is available for 60 seconds after each run, and can be polled during this time
-enable_metrics: false
+# Environment and last job metrics stored here
+metrics_dir: %s/metrics
+# If per_job_metrics_server is enabled, or cargoport -metrics-daemon is run
+# Then the prometheus /metrics endpoint will be available at this address:socket
 listen_address: 127.0.0.1
 listen_port: 9101
-listen_duration: 60
-`, rootDir, rootDir, rootDir, rootDir)
+# Interval between metrics exposure reloads when running in headless metrics daemon mode
+metrics_daemon_reload_interval: 30 
+
+# Allow cargoport to run a prometheus metrics endpoint after each job run
+# This endpoint is available for a defined number of seconds after each run, and can be polled during this time
+per_job_metrics_server: false # open http /metrics endpoint after each job attempt
+listen_duration: 60 # expose http endpoint for 60s after job
+`, rootDir, rootDir, rootDir, rootDir, rootDir)
 
 	// Write default config file
 	return os.WriteFile(configFilePath, []byte(defaultConfig), 0644)
