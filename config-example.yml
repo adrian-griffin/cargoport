@@ -36,3 +36,17 @@ log_format: text        # 'json' or 'text'
 # if 'text' format, logs will utilize ANSI codes for colouring
 # great for readability, but makes casual log grepping harder without using looser matches
 log_text_format_colouring: true
+
+# [ METRICS ] 
+metrics_dir: /var/cargoport/metrics
+# If per_job_metrics_server is enabled, or cargoport -metrics-daemon is run
+# Then the prometheus /metrics endpoint will be available via this address:port
+listen_address: 127.0.0.1
+listen_port: 9101
+# Optionally allow cargoport to run an http metrics endpoint after each job run
+# This endpoint is exposed for a defined number of seconds and can be scraped to monitor trends
+per_job_metrics_server: false # open http /metrics endpoint after each job attempt
+listen_duration: 60 # expose http endpoint for 60s after job
+# Interval between metrics exposure reloads when running in headless metrics daemon mode
+# Only applies when -metrics-daemon flag is passed
+metrics_daemon_reload_interval: 30 

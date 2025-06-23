@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [0.95.5] - 2025-6-22
+## [0.95.7] - 2025-6-22
 - Rework of /metrics endpoint
 - Implemented optional `-metrics-daemon` mode that can expose cargoport metrics perpetually
 

@@ -99,12 +99,12 @@ func SetupTool() {
 	// init env and determine directories & logfile
 	cargoportBase, cargoportLocal, cargoportRemote, logFilePath, cargoportKeys, cargoportMetrics := InitEnvironment(configFile)
 
-	fmt.Printf("Root directory initialized at: %s", cargoportBase)
-	fmt.Printf("Local backup output directory: %s", cargoportLocal)
-	fmt.Printf("Remote inbound storage directory: %s", cargoportRemote)
-	fmt.Printf("SSH hey storage: %s", cargoportKeys)
-	fmt.Printf("Metrics storage: %s", cargoportMetrics)
-	fmt.Printf("Log file initialized at: %s", logFilePath)
+	fmt.Printf("Root directory initialized at: %s\n", cargoportBase)
+	fmt.Printf("Local backup output directory: %s\n", cargoportLocal)
+	fmt.Printf("Remote inbound storage directory: %s\n", cargoportRemote)
+	fmt.Printf("SSH hey storage: %s\n", cargoportKeys)
+	fmt.Printf("Metrics storage: %s\n", cargoportMetrics)
+	fmt.Printf("Log file initialized at: %s\n", logFilePath)
 
 	fmt.Println(" ")
 	fmt.Println("------")
@@ -211,19 +211,18 @@ log_format: text        # 'json' or 'text'
 log_text_format_colouring: true
 
 # [ METRICS ] 
-# Environment and last job metrics stored here
 metrics_dir: %s/metrics
 # If per_job_metrics_server is enabled, or cargoport -metrics-daemon is run
-# Then the prometheus /metrics endpoint will be available at this address:socket
+# Then the prometheus /metrics endpoint will be available via this address:port
 listen_address: 127.0.0.1
 listen_port: 9101
-# Interval between metrics exposure reloads when running in headless metrics daemon mode
-metrics_daemon_reload_interval: 30 
-
-# Allow cargoport to run a prometheus metrics endpoint after each job run
-# This endpoint is available for a defined number of seconds after each run, and can be polled during this time
+# Optionally allow cargoport to run an http metrics endpoint after each job run
+# This endpoint is exposed for a defined number of seconds and can be scraped to monitor trends
 per_job_metrics_server: false # open http /metrics endpoint after each job attempt
 listen_duration: 60 # expose http endpoint for 60s after job
+# Interval between metrics exposure reloads when running in headless metrics daemon mode
+# Only applies when -metrics-daemon flag is passed
+metrics_daemon_reload_interval: 30 
 `, rootDir, rootDir, rootDir, rootDir, rootDir)
 
 	// Write default config file

@@ -221,7 +221,13 @@ func main() {
 
 		// spawn goroutine to reload from cache .json files to push new metrics updates to http interface
 		go func() {
-			ticker := time.NewTicker(inputCTX.Config.MetricsDaemonReloadInterval * time.Second)
+			reloadInterval := inputCTX.Config.MetricsDaemonReloadInterval
+			if reloadInterval <= 0 {
+				reloadInterval = 60
+				logger.Logx.Warnf("Invalid or unset reload interval; defaulting to %ds", reloadInterval)
+			}
+			ticker := time.NewTicker(time.Duration(reloadInterval) * time.Second)
+
 			defer ticker.Stop()
 
 			for {
@@ -233,7 +239,7 @@ func main() {
 						continue
 					}
 					metrics.ApplyPrometheusMetrics(job, env)
-					//logger.Logx.Debugf("Reloaded metrics from disk")
+					logger.Logx.Debugf("Reloaded metrics from disk")
 				}
 			}
 		}()
@@ -243,6 +249,7 @@ func main() {
 		}
 
 		logger.Logx.Infof("Starting persistent metrics daemon at http://%s:%s/metrics", inputCTX.Config.ListenAddress, inputCTX.Config.ListenSocket)
+		logger.Logx.Infof("Reload interval from cache is %d", inputCTX.Config.MetricsDaemonReloadInterval)
 		http.Handle("/metrics", promhttp.Handler())
 		http.ListenAndServe(inputCTX.Config.ListenAddress+":"+inputCTX.Config.ListenSocket, nil)
 		return

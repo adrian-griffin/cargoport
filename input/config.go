@@ -31,7 +31,7 @@ type ConfigFile struct {
 	ListenAddress               string `yaml:"listen_address"`
 	ListenSocket                string `yaml:"listen_port"`
 	ListenDuration              int    `yaml:"listen_duration"`
-	MetricsDaemonReloadInterval int    `yaml:"metrics_daemon_reload_interval`
+	MetricsDaemonReloadInterval int    `yaml:"metrics_daemon_reload_interval"`
 }
 
 // system-wide config reference path
