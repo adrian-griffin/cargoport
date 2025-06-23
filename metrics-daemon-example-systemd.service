@@ -1,0 +1,15 @@
+[Unit]
+Description=Cargoport Metrics Daemon
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/cargoport -metrics-daemon
+Restart=on-failure
+User=root
+WorkingDirectory=/var/cargoport
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

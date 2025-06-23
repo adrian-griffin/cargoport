@@ -239,7 +239,7 @@ func main() {
 						continue
 					}
 					metrics.ApplyPrometheusMetrics(job, env)
-					logger.Logx.Debugf("Reloaded metrics from disk")
+					//logger.Logx.Debugf("Reloaded metrics from disk")
 				}
 			}
 		}()
