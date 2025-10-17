@@ -2,9 +2,11 @@
 
 A 🐳 Docker compose environment backup & transfer tool, written in Go!
 
-Built from the ground up for seamless use with `cron` on Linux servers & machines.
+Built bottom-up for use with `cron` on Linux servers & machines.
 
-Allows easy transfer of backups to remote, off-prem machines, utilizing a built in SSH keytool for simple & hands-off backups on schedules.
+Automated and easy snapshots of docker-compose environments.
+
+Transfer of backups to remote, off-prem machines, utilizing a built in SSH keytool for simple backups on schedules.
 
 ## Table of Contents
 - [Install](#install)
@@ -19,23 +21,24 @@ Allows easy transfer of backups to remote, off-prem machines, utilizing a built 
 
 ## ✨ Features
 
-Handles docker service halting & backups of compose container's data, environment, & configs, storing all data in a `.tar.gz` archive by default. One of Cargoport's core design pillars is to enable easy and reliable transfer of backup data to remote machines, with the intent being that copies of containers are portable and self-contained. 
+Safely halts docker compose containers & snapshots the container's data, environment, & configs, compressing all and storing in a tarball. One of the core design pillars is simple & reliable transfer of snapshots to remote machines, with the intent being that each copy of a container is portable and self-contained. 
 
 ✅ Minimal dependencies (just Go & Rsync)
 
 🔐 SSH keytool is built-in. Cargoport handles its own SSH keys, and sharing public keys to remote targets is made easy with the `-copy-key` flag.
 
-🧷 Each and every backup snapshots the images & digests of the docker services, storing them alongside the `docker-compose.yml` file for easier and more reliable restoration (especially helpful when transferring between machines, pulling updates, using the `:latest` tag, etc.). 
+🧷 Each and every backup snapshots the images & digests of the docker services, critical information for more robust container disaster-recovery, storing them alongside the `docker-compose.yml`. This is especially helpful when transferring between machines, pulling updates, using the `:latest` tag, etc., as slightly varying docker image versions/hashes can prevent the container from launching properly and leading to data loss.
 
 📅 Cron-compatible by design, allowing both remote & local backup with one command. Ready for hands-off automation!
 
+Cargoport is primarily built for self-hosted, smaller data services. Rolling backups is not supported, and overly large data volumes may pose trouble with the `.tar.gz` compression. 
 
 **Use cases include:**
 
 - Docker services behind reverse proxies can be easily moved from machine to machine, or with failover/HA setups
 - Cloning environments for staging/testing
-- Creating remote cold backups 
-- Snapshotting or versioning services
+- Creating remote cold, long-term backups 
+- Snapshotting or versioning services when making changes
 
 
 ## ⚠️ Limitations
@@ -43,11 +46,11 @@ Handles docker service halting & backups of compose container's data, environmen
 - ❌ Does not support Docker Swarm or Kubernetes
 - ❌ No native cloud storage transfer (unless via SSH access)
 - ❌ Does not perform live or incremental backups (containers are stopped for consistency)
-- ❌ Only works with docker compose builds, docker run environments are not currently supported
+- ❌ Only works with docker-compose builds, docker run environments are not currently supported
 
-Cargoport relies on the docker container design being self-encompassing, with data volumes and config files being mounted locally, stored within the same parent directory alongside the `docker-compose.yml`. This is a pretty common setup, but please be aware of the limitations.
+Cargoport relies on the docker container design being self-encompassing, with data volumes and config files being mounted locally in the directory root, alongside the `docker-compose.yml`. This is a pretty common setup for homelab purposes, but please be aware of the limitations.
 
-If your setup uses external volume mounts located elsewhere on the system, or volumes managed by the docker volume drivers, these directories **will not** be included in the backup. This can prove useful however, allowing you to exclude large, ephemeral, or non-critical data (like media libraries, cache folders, etc.)
+If your setup uses external volume mounts located elsewhere on the system, or volumes managed by the docker volume drivers, these directories **will not** be included in the backup. *This can prove useful however*, allowing you to exclude large, ephemeral, or non-critical data (such as media libraries, cache folders, etc.)
 
 ### Recommended Directory Layout 📁
 ```shell
@@ -64,8 +67,8 @@ If your setup uses external volume mounts located elsewhere on the system, or vo
 
 ### Dependencies:
 
-- For initial binary compilation, Go is needed
-- Rsync is needed on both the local node running cargoport, as well as the target machine you want to share backups with
+- For initial binary compilation, Go is needed. Prebuilt executables are not provided.
+- Rsync is needed on *both* the local node running cargoport, as well as the target machine(s) you want to transfer backups to
 
 Cargoport has been tested on both latest Debian & Arch, and while it should work well on other distros, it has not been fully tested outside of these two, so please do use at your own caution. 
 
@@ -79,12 +82,12 @@ These instructions should get ya through it, but for more detailed instructions,
 ·> cd ~
 ·> mkdir go && mkdir go/builds/
 
-# This will download Go v1.22.5 for linux machines running AMD64 architecture
-# Please adjust as necessary
-·> cd ~/go/builds/ && wget https://go.dev/dl/go1.22.5.linux-amd64.tar.gz
+# This will download Go v1.25.1 for linux machines running AMD64 architecture
+# Please adjust architectures as necessary
+·> cd ~/go/builds/ && wget https://go.dev/dl/go1.25.1.linux-amd64.tar.gz
 
 # Clear out any remaining or old Go install files & decompress new content into /usr/local/go
-·> rm -rf /usr/local/go && tar -C /usr/local -xzf go1.22.5.linux-amd64.tar.gz
+·> rm -rf /usr/local/go && tar -C /usr/local -xzf go1.25.1.linux-amd64.tar.gz
 
 # Add /usr/local/go/bin to $PATH
 # Note: Add to your shell's rcfile to persist
@@ -93,7 +96,7 @@ These instructions should get ya through it, but for more detailed instructions,
 ```shell
 # check that go is executable
 ·> go version
-go version go1.22.5 linux/amd64
+go version go1.25.1 linux/amd64
 ```
 
 #### rsync
@@ -108,8 +111,6 @@ For remote sending, rsync is needed on both the local machine and the remote:
 
 ### Set up CargoPort
 
-Note that it is recommended to install Cargoport on each machine that you plan to manage/transfer backups between!
-
 #### git clone repo & build into executable binary
 ```shell
 # git clone repo
@@ -120,7 +121,7 @@ Note that it is recommended to install Cargoport on each machine that you plan t
 ```
 
 #### add to $PATH (optional)
-Using whatever means you'd like, feel free to set the binary up for execution via your PATH to be called from anywhere on the machine, cargoport requires shell elevation/sudo for docker daemon and other filestorage interactions (this is planned to be rewritten)
+Using whatever means you'd like, feel free to set the binary up for execution via your PATH to be called from anywhere on the machine, cargoport requires shell elevation/sudo for docker daemon and other filestorage interactions (this is planned to be rewritten with a dedicated user)
 
 basic binary relocation example:
 ```shell
@@ -131,11 +132,11 @@ version: v1.x.x
 ```
 
 #### run setup wizard
-Run the setup utility to begin. This root directory will house logs, config, and be the default storage location for outgoing and incoming backup transfers
+Run the setup utility to begin. This root directory will house logs, config, metrics data, and will be the default storage location for outgoing and incoming backup transfers.
 
-In order to utilize the `/var/cargoport/remote` directory during transfers between machines, `cargoport -setup` should be run on both machines; otherwise a manual valid path must be passed using the `-remote-dir` flag instead
+In order to utilize the `/var/cargoport/remote` directory during transfers between machines rather than the remote-user's home directory (`/home/$USER/backup.tar.gz`), cargoport will need to be installed on *both* machines and the sending machine's config adjusted.
 
-Typically you will want to allow the setup wizard to create your default local config.yml file
+You will most likely want to allow the setup wizard to create your default local config.yml file
 
 ```shell
 ·> cargoport -setup  
@@ -233,6 +234,19 @@ By default, remote transfers will result in your backupfile being stored in the 
 
 You will now able to specify using `/var/cargoport/remote` on the remote host for a backup transfer
 
+### Metrics and metrics scraping
+
+A prometheus endpoint can be exposed to allow scraping of basic Cargoport metrics, such as last-job duration, total tarball count, backup storage usage, etc.
+
+This can be set up in many NMSs, such as LibreNMS or Zabbix, to track tarball count, job statistics, etc over time.
+
+It's worth noting, however, that Cargoport only updates its metrics on every job run. Part of the design philosophy is to be a single-execution, one-and-done sysadmin shell script, and I don't want to bloat it by having a daemon or background service built in.
+
+As such, metrics exposing can be handled in one of two ways, depending on preference.
+
+1) After the conclusion of each job, a metrics endpoint can be exposed for a set amount of time. For instance, after each job a Prometheus HTTP endpoint could be exposed for 60s to allow Zabbix to scrape for metrics tracking. The downside here is that graphs-over-time of this data will only show blips of data for 60s at a time, only when a job runs. This can lead to large gaps in the collected data-over-time.
+
+2) Alternatively, a mini-daemon can be stood up to allow perpetual polling of the metrics endpoint. `cargoport -metrics-daemon` will do nothing besides exposing a Prometheus endpoint of metrics and supplying logs. This can be wrapped into a systemd daemon so that data collection can happen 24/7. See the `metrics-daemon-example.service` file for more information.
 
 ### Viewing output filesizes or Cargoport total directory volume
 
