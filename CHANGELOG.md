@@ -3,86 +3,89 @@
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+## [0.96.2] - 2026-February-3
+- Backup encryption flag added
+- Age keytool and encryption process added
 
-## [0.95.7] - 2025-6-22
+## [0.95.7] - 2025-June-22
 - Rework of /metrics endpoint
 - Implemented optional `-metrics-daemon` mode that can expose cargoport metrics perpetually
 
-## [0.95.3] - 2025-6-21
+## [0.95.3] - 2025-June-21
 - Added /metrics endpoint for polling basic data
 
-## [0.94.0] - 2025-6-21
+## [0.94.0] - 2025-June-21
 - Total job handling and packaging overhaul
 - More robust logic surrounding configfile interpretation
 - Can now set default output dir to elsewhere on the system rather than inside the cargoport rootdir
 
-## [0.93.3] - 2025-6-19
+## [0.93.3] - 2025-June-19
 - Input & configfile validations overhauls
 - Global packaging updates
 - Improved overrides & logic flow for overall program input 
 
-## [0.93.0] - 2025-6-9
+## [0.93.0] - 2025-June-9
 - Added structured logging
 - Added job contexts
 - Added jobIDs for continous job tracking
 - Added output filesize to structured logging
 - Adding per package framework for varying log levels
 
-## [0.92.24] - 2025-6-8
+## [0.92.24] - 2025-June-8
 - Deployed & implement multiple fields for more effective structured logging for the project long term 
 - Implemented configfile variable for swapping between json & text logfile formats
 - Major debug/info log_level revisions
 
-## [0.92.11] - 2025-6-7
+## [0.92.11] - 2025-June-7
 - Introduced new structured logger functionality
 - Migrated all packages to using new log output
 - Initialized new logger.go package
 - Adding log output level variable to config
 
-## [0.91.2] - 2025-6-7
+## [0.91.2] - 2025-June-7
 - Added 22/tcp socket connection timeouts to alleviate hang if remote host responds to ICMP but silently INPUT; REJECTs SSH traffic in its ACLs
 - Added ICMP & SSH network test toggles to configfile
 - Tweaked output filename tagging
 
-## [0.90.1] - 2025-6-7
+## [0.90.1] - 2025-June-7
 - Added backup/snapshot output file name tagging
 
-## [0.89.44] - 2025-6-7
+## [0.89.44] - 2025-June-7
 - Fixing remote transfer boolean validation logic bug
 - Fixed inventory init verbosity bug when taking non-setup pathways
 
-## [0.89.43] - 2025-6-6
+## [0.89.43] - 2025-June-6
 - Fixed remote output default/failsafe logic
 - Fixed configfile remote output location interpretation 
 - Hotfix for remote output dir validation logic
 
-## [0.89.40] - 2025-6-6
+## [0.89.40] - 2025-June-6
 - Added hostname & creation date information to generated SSH key comments
 - Adjusted wizard SSH key, configfile, etc. validation logic
 - Setup wizard verbiage and output adjustments
 
-## [0.88.40] - 2025-4-20
+## [0.88.40] - 2025-April-20
 - Major overhauls of configfile logic & framework
 - Major configfile validation & safety improvements
 - SSH key integrity checks & path validation adjustmens
 - SSH key generation improvements
 - Setup wizard tweaks
 
-## [0.88.39] - 2025-4-19
+## [0.88.39] - 2025-April-19
 - Added flag for optionally skipping docker container restarts after backup
 - Fixed issue where docker container restarts would fail to trigger after issues during the backup process 
 - Enhanced path & permission validation logic for local backup outputs
 - Better target path determination validations
 - Better remote target validity validations
 
-## [0.88.36] - 2025-1-31
+## [0.88.36] - 2025-January-31
 - Separated check ssh & check icmp
 - Added net handler package
 - Rsync call adjustments
 - Remote flag validation improvements
 - Minor validation & bugfixes for SSH handling
 
-## [0.88.33] - 2025-1-29
+## [0.88.33] - 2025-January-29
 - Docker image bugfix with not writing img digests to backup if container was down at backup execution
 - Skip Local bugfixes
 - Fixed bugs with Docker container not being restarted when fatalError during backup or transfer jobs
@@ -90,15 +93,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Integrated gzip & tar functionality writers
 - Auto-copy ssh keys on remote transfer
 
-## [0.88.30] - 2025-1-28
+## [0.88.30] - 2025-January-28
 - Refactored all code into packages
 - Major logic adjustments all around
 
-## [0.88.23] - 2025-1-28
+## [0.88.23] - 2025-January-28
 - SSH Keytool added
 - SSH Key copy tool added
 
-## [0.88.20] - 2025-1-26
+## [0.88.20] - 2025-January-26
 - Incorporated setuptool
 - Added configfile
 - Large logic overhauls for most docker-related functions
@@ -110,30 +113,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Help flag total rework
 - Incorporated backup job duration time to completion output
 
-## [0.87.61] - 2025-1-25
+## [0.87.61] - 2025-January-25
 - Adjust custom local backup output dir logic
 - New default storage directories for remote and local, new log output file along with other cargoport files
 - Smarter logic for remote send output dir/destination 
 
-## [0.87.57] - 2025-1-25
+## [0.87.57] - 2025-January-25
 - Overhaulinged Docker logic, adding additional flags for docker logic regarding restarting container or not
 - Fixed issue with not performing backup when target directory's docker container was not in running state
 - Adjusted all remote send logic and flags, remote send mode enabled when remote-host is passed now, rather than via separate flag
 - Remote host ipv6 & ipv6 validations incorporated
 - Directory input & handling sanitations and cleanup
 
-## [0.87.52] - 2025-1-24
+## [0.87.52] - 2025-January-24
 - Fixed issue with backup completion success confirmation log notices not showing intended dir
 - Adjusted logic for flag processing, container restarts, and local cargoport dir creation 
 - Overhauls of target paths, docker compose file detection, compression calls
 
-## [0.87.50] - 2025-1-23
+## [0.87.50] - 2025-January-23
 - Reworked majority of target & path logic
 - Adjusted backup storage paths (uses /var/cargoport/ as root dir), docker digest file adjustments
 - Overhauled docker container location & detection logic, docker mode can now be dynamically enabled by cargoport using docker-compose.yml searching features
 - Now supports locating of docker-compose.yml by docker container name, such as `-docker-name=<container-name>` to locate container & perform docker tasks
 
-## [v0.87.1] - 2025-1-22
+## [v0.87.1] - 2025-January-22
 - Branding adjustments & general tidyup
 - Basic logging implemented
 - Implemented versioning & flags

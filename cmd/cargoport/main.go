@@ -61,6 +61,7 @@ func main() {
 	localOutputDir := flag.String("output-dir", "", "Custom destination for local output")
 	restartDockerBool := flag.Bool("restart-docker", true, "Restart docker container after successful backup. Enabled by default")
 	tagOutputString := flag.String("tag", "", "Append identifying tag to output file name (e.g: service1-<tag>.bak.tar.gz)")
+	encryptBool := flag.Bool("encrypt", false, "Encrypt resulting backup tarball using age encyption")
 
 	// remote transfer flags
 	skipLocal := flag.Bool("skip-local", false, "Skip local backup & only send to remote target")
@@ -105,6 +106,8 @@ func main() {
 		fmt.Println("           Restart docker container after successful backup. Enabled by default")
 		fmt.Println("        -tag <tag>")
 		fmt.Println("           Append identifying tag to output file name (e.g: service1-<tag>.bak.tar.gz)")
+		fmt.Println("        -encrypt")
+		fmt.Println("           Encrypt resulting backup tarball using age encyption")
 		fmt.Println("\n  [Remote Transfer Flags]")
 		fmt.Println("      -skip-local")
 		fmt.Println("         Skip local backup and only send to the remote target (Note: utilized `/tmp`)")
@@ -176,6 +179,7 @@ func main() {
 		RemoteOutputDir:  *remoteOutputDir,
 		SendDefaults:     *sendDefaults,
 		Tag:              *tagOutputString,
+		EncryptBool:      *encryptBool,
 		CopySSHKey:       *copySSHKeyBool,
 		GenerateSSHKey:   *newSSHKeyBool,
 		MetricsDaemon:    *metricsDaemon,

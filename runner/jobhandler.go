@@ -44,6 +44,7 @@ func RunJob(inputctx *input.InputContext) (context job.JobContext, err error) {
 		TargetDir:              "",
 		RootDir:                inputctx.DefaultOutputDir,
 		Tag:                    inputctx.Tag,
+		EncryptBool:            inputctx.EncryptBool,
 		RestartDocker:          inputctx.RestartDocker,
 		RemoteHost:             string(inputctx.RemoteHost),
 		RemoteUser:             string(inputctx.RemoteUser),
@@ -76,6 +77,7 @@ func RunJob(inputctx *input.InputContext) (context job.JobContext, err error) {
 		"job_id":  jobCTX.JobID,
 		"tag":     jobCTX.Tag,
 		"version": meta.Version,
+		"encrypt": jobCTX.EncryptBool,
 	})
 
 	// declare target base name for metrics and logging tracking
@@ -104,6 +106,18 @@ func RunJob(inputctx *input.InputContext) (context job.JobContext, err error) {
 
 		logger.LogxWithFields("error", fmt.Sprintf("error compressing target: %v", err), coreFields)
 		return jobCTX, err
+	}
+
+	// if encrypt enabled, encrypt resulting outputfile
+	// HARDCODED REMOVE RAW BOOL RN
+	if inputctx.EncryptBool {
+		encryptedTarballPath, err := util.AgeEncrypt(filepath.Join(inputctx.Config.DefaultCargoportDir, "/keys/", "/age/", "cargoport-public.txt"), outputFilePath, true)
+		if err != nil {
+			return jobCTX, fmt.Errorf("error encrypting output: %w", err)
+		}
+
+		// override filepath to newly encrypted for remainder of operations
+		outputFilePath = encryptedTarballPath
 	}
 
 	// handle remote transfer

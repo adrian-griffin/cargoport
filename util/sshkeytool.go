@@ -117,7 +117,7 @@ func ValidateSSHPrivateKeyPerms(privKeyPath string) error {
 	// validate permissions are correct
 	perms := privKeyInfo.Mode().Perm()
 	if perms > 0600 {
-		return fmt.Errorf("ssh key permissions are too open: %o (expected max 0600)", perms)
+		return fmt.Errorf("ssh key permissions are too open: %o (max 0600)", perms)
 	}
 
 	// determine file owner

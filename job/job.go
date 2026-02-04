@@ -18,6 +18,7 @@ type JobContext struct {
 	TargetDir              string
 	RootDir                string
 	Tag                    string
+	EncryptBool            bool
 	RestartDocker          bool
 	RemoteHost             string
 	RemoteUser             string

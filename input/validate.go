@@ -19,6 +19,7 @@ type InputContext struct {
 	RemoteOutputDir  string
 	SendDefaults     bool
 	Tag              string
+	EncryptBool      bool
 	CopySSHKey       bool
 	GenerateSSHKey   bool
 	RootDir          string

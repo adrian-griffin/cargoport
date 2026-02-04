@@ -13,7 +13,7 @@ import (
 )
 
 // sets up cargoport parent dirs & logging
-func InitEnvironment(configFile ConfigFile) (string, string, string, string, string, string) {
+func InitEnvironment(configFile ConfigFile) (string, string, string, string, string, string, string) {
 	// initialize parent cargoport dirs on system
 	var err error
 
@@ -21,7 +21,9 @@ func InitEnvironment(configFile ConfigFile) (string, string, string, string, str
 	cargoportBase := strings.TrimSuffix(configFile.DefaultCargoportDir, "/")
 	cargoportLocal := filepath.Join(cargoportBase, "/local")
 	cargoportRemote := filepath.Join(cargoportBase, "/remote")
-	cargoportKeys := filepath.Join(cargoportBase, "/keys")
+	cargoportKeysBase := filepath.Join(cargoportBase, "/keys")
+	cargoportSSHKeys := filepath.Join(cargoportKeysBase, "/ssh")
+	cargoportAgeKeys := filepath.Join(cargoportKeysBase, "/age")
 	cargoportMetrics := filepath.Join(cargoportBase, "/metrics")
 
 	// create /$CARGOPORT/
@@ -39,20 +41,20 @@ func InitEnvironment(configFile ConfigFile) (string, string, string, string, str
 		log.Fatalf("ERR: Error creating directory %s: %v", cargoportRemote, err)
 	}
 
-	// create /$CARGOPORT/keys cargoportKeys
-	if err = os.MkdirAll(cargoportKeys, 0755); err != nil {
-		log.Fatalf("ERR: Error creating directory %s: %v", cargoportKeys, err)
+	// create /$CARGOPORT/keys cargoportSSHKeys
+	if err = os.MkdirAll(cargoportSSHKeys, 0755); err != nil {
+		log.Fatalf("ERR: Error creating directory %s: %v", cargoportSSHKeys, err)
 	}
 
-	// create /$CARGOPORT/keys cargoportKeys
+	// create /$CARGOPORT/keys cargoportSSHKeys
 	if err = os.MkdirAll(cargoportMetrics, 0755); err != nil {
-		log.Fatalf("ERR: Error creating directory %s: %v", cargoportKeys, err)
+		log.Fatalf("ERR: Error creating directory %s: %v", cargoportSSHKeys, err)
 	}
 
 	// initialize logging
 	logFilePath := logger.InitLogging(cargoportBase, configFile.LogLevel, configFile.LogFormat, configFile.LogTextColour)
 
-	return cargoportBase, cargoportLocal, cargoportRemote, logFilePath, cargoportKeys, cargoportMetrics
+	return cargoportBase, cargoportLocal, cargoportRemote, logFilePath, cargoportSSHKeys, cargoportAgeKeys, cargoportMetrics
 }
 
 // guided setup tool for initial init
@@ -97,14 +99,7 @@ func SetupTool() {
 	}
 
 	// init env and determine directories & logfile
-	cargoportBase, cargoportLocal, cargoportRemote, logFilePath, cargoportKeys, cargoportMetrics := InitEnvironment(configFile)
-
-	fmt.Printf("Root directory initialized at: %s\n", cargoportBase)
-	fmt.Printf("Local backup output directory: %s\n", cargoportLocal)
-	fmt.Printf("Remote inbound storage directory: %s\n", cargoportRemote)
-	fmt.Printf("SSH hey storage: %s\n", cargoportKeys)
-	fmt.Printf("Metrics storage: %s\n", cargoportMetrics)
-	fmt.Printf("Log file initialized at: %s\n", logFilePath)
+	cargoportBase, cargoportLocal, cargoportRemote, logFilePath, cargoportSSHKeys, cargoportAgeKeys, cargoportMetrics := InitEnvironment(configFile)
 
 	fmt.Println(" ")
 	fmt.Println("------")
@@ -116,8 +111,13 @@ func SetupTool() {
 
 	// if DNE then prompt to create default config
 	if _, err := os.Stat(configFilePath); os.IsNotExist(err) {
+		fmt.Println(" ")
+		fmt.Println("Configfile Setup")
+		fmt.Println("------")
+		fmt.Println(" ")
 		for {
 			fmt.Printf("No config.yml found in %s. Would you like to create one? (y/n): ", cargoportBase)
+			fmt.Printf("(Recommended for new users)")
 			fmt.Println(" ")
 			var createConfig string
 			// scan for input
@@ -130,6 +130,14 @@ func SetupTool() {
 				if err != nil {
 					log.Fatalf("ERROR: Failed to create config.yml %v", err)
 				}
+				fmt.Printf("Root directory initialized at: %s\n", cargoportBase)
+				fmt.Printf("Local backup output directory: %s\n", cargoportLocal)
+				fmt.Printf("Remote inbound storage directory: %s\n", cargoportRemote)
+				fmt.Printf("SSH key storage: %s\n", cargoportSSHKeys)
+				fmt.Printf("Age key storage: %s\n", cargoportAgeKeys)
+				fmt.Printf("Metrics storage: %s\n", cargoportMetrics)
+				fmt.Printf("Log file initialized at: %s\n", logFilePath)
+				fmt.Printf("\n")
 				fmt.Printf("Default config.yml created at %s", configFilePath)
 				break
 
@@ -145,12 +153,47 @@ func SetupTool() {
 		}
 	}
 	fmt.Println(" ")
-	time.Sleep(250 * time.Millisecond)
+
+	fmt.Printf("\n")
+
+	fmt.Println(" ")
+	fmt.Println("SSH Key Information\n")
+	fmt.Println("------\n")
+	fmt.Println(" ")
+
+	fmt.Printf("Cargoport creates and handles its own SSH keys for remote-transfers\n")
+	fmt.Printf("Password prompt entry works when running cargoport manually, but if you want to utilize cron for backups on a schedule, SSH keys are required\n")
+	fmt.Printf(" ")
 
 	// create ssh key pair
-	sshKeyName := "cargoport-id-ed25519"
-	if err := util.GenerateSSHKeypair(cargoportKeys, sshKeyName); err != nil {
+	sshKeyName := "cargoport-ssh-id-ed25519"
+	if err := util.GenerateSSHKeypair(cargoportSSHKeys, sshKeyName); err != nil {
 		log.Fatalf("ERROR <util>: Failed to generate SSH key: %v", err)
+	}
+
+	fmt.Printf("\n")
+
+	fmt.Println(" ")
+	fmt.Println("Backup Encryption Information - Please Read\n")
+	fmt.Println("------\n")
+	fmt.Println(" ")
+
+	fmt.Printf("When creating a backup, cargoport can encrypt the resulting compressed archive using age encryption\n")
+	fmt.Printf("After encryption, backups can ONLY be restored if you have the correct decryption key (so don't lose it!)\n")
+	fmt.Printf("When performing a backup with cargoport, pass the `-e` flag to encrypt.\n")
+
+	fmt.Printf("\n")
+
+	fmt.Printf("If you opt to encrypt any backups, please be sure to locate and SAVE the contents of `cargoport.agefile` (default `/var/cargoport/keys/age/cargoport.agefile`)\n")
+	fmt.Printf("Recommended methods include using a password manager to save the contents, or copying this file to another, offline machine or USB\n")
+	fmt.Printf("Although not required, it's recommended to remove the `cargoport.agefile` from this machine entirely to minimize blast radius if this machine is ever compromised\n")
+	fmt.Printf("\n")
+	fmt.Printf("If you never plan to use this feature, it can safely be ignored and no file needs to be removed\n")
+
+	// prompt to create age key
+	ageKeyName := "cargoport.agekey"
+	if err := util.GenerateAgeKeypair(cargoportAgeKeys, ageKeyName); err != nil {
+		log.Fatalf("ERROR <util>: Failed to generate Age encryption key: %v", err)
 	}
 
 	// save true config at /etc/ reference
@@ -161,6 +204,9 @@ func SetupTool() {
 	fmt.Println(" ")
 	time.Sleep(250 * time.Millisecond)
 
+	fmt.Printf("\n")
+	fmt.Printf("Intial setup completed, default config located at %s", configFilePath)
+	fmt.Printf("\n")
 	logger.LogxWithFields("info", "Environment setup completed successfully!", map[string]interface{}{
 		"package": "environment",
 		"success": true,
@@ -171,7 +217,7 @@ func SetupTool() {
 // create default config and write to ./config.yml
 func createDefaultConfig(configFilePath, rootDir string) error {
 	// Template for default config.yml
-	defaultConfig := fmt.Sprintf(`# [ LOCAL DEFAULTS ]
+	defaultConfig := fmt.Sprintf(`# [ LOCAL ]
 ## For your convenience, only change the default_cargoport_directory using the -setup flag
 default_cargoport_directory: %s
 default_output_directory: %s/local
@@ -179,7 +225,7 @@ default_output_directory: %s/local
 ## Skip all local backups from this machine by default, requires remote flags
 skip_local_backups: false
 
-# [ REMOTE TRANSFER DEFAULTS]
+# [ REMOTE TRANSFER ]
 default_remote_user: admin
 default_remote_host: 10.0.0.1
 
@@ -188,15 +234,15 @@ default_remote_host: 10.0.0.1
 #default_remote_output_dir: %s/remote
 default_remote_output_dir: ~/
 
-# [ NETWORK SETTINGS ]
+# [ NETWORK ]
 # These tests run before every remote transfer
 # If you enable SSH tests, you will be prompted for the remote password twice until you copy the SSH key
 icmp_test: true
 ssh_test: false
 
-# [ SSH KEYTOOL DEFAULTS ]
-ssh_key_directory: %s/keys
-ssh_private_key_name: cargoport-id-ed25519
+# [ SSH KEYTOOL ]
+ssh_key_directory: %s/keys/ssh
+ssh_private_key_name: cargoport-ssh-id-ed25519
 
 # [ LOGGING ]
 # I'd recommend debug or info for most cases
